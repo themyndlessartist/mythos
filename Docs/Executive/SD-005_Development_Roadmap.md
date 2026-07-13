@@ -42,6 +42,7 @@ Planned order:
 4. SYS-004 Region Framework — Specified
 5. SYS-005 Character Framework — Specified
 6. SYS-006 Save and Persistence Framework — Specified
+7. SYS-007 NPC Framework — Planned
 
 --------------------------------------------
 

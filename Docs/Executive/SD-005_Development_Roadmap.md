@@ -37,10 +37,10 @@ Status: In Progress
 Planned order:
 
 1. SYS-001 Entity Framework — Specified
-2. SYS-002 Event Framework
-3. SYS-003 Time Framework
-4. SYS-004 Region Framework
-5. SYS-005 Character Framework
+2. SYS-002 Event Framework — Specified
+3. SYS-003 Time Framework — Specified
+4. SYS-004 Region Framework — Specified
+5. SYS-005 Character Framework — Specified
 6. SYS-006 NPC Framework
 
 --------------------------------------------

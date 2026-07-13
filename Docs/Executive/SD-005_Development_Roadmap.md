@@ -36,7 +36,7 @@ Status: In Progress
 
 Planned order:
 
-1. SYS-001 Entity Framework
+1. SYS-001 Entity Framework — Specified
 2. SYS-002 Event Framework
 3. SYS-003 Time Framework
 4. SYS-004 Region Framework

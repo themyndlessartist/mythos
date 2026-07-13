@@ -1,10 +1,69 @@
-# SD-004: Open Questions
+# SD-004 — Open Questions
 
-- Document ID: SD-004
-- Title: Open Questions
-- Version: 0.1
-- Status: Draft / Awaiting Executive Content
-- Owner: Mythos Executive Development
-- Last Updated: 2026-07-11
+Version: 0.1
 
-Approved content for this document will be supplied from the primary Mythos development chat. Do not invent or expand substantive open questions content in this placeholder.
+Status: Approved
+
+Owner: Mythos Executive Development
+
+Last Updated: July 2026
+
+--------------------------------------------
+
+# 1. Purpose
+
+This document records unresolved executive and architectural questions.
+
+Every item in this document is deferred, not rejected.
+
+--------------------------------------------
+
+# 2. Technical
+
+| Question | Status |
+| --- | --- |
+| Final engine | Deferred |
+| Programming language | Deferred |
+| Persistence and save format | Deferred |
+| Database strategy | Deferred |
+| Modding architecture | Deferred |
+| Networking strategy, if any | Deferred |
+| Detailed entity implementation model | Deferred |
+
+--------------------------------------------
+
+# 3. Time and Population
+
+| Question | Status |
+| --- | --- |
+| Real-time length of an in-game day | Deferred |
+| Aging rate | Deferred |
+| Player aging and natural death | Deferred |
+| Birth and population growth rules | Deferred |
+| Season and calendar pacing | Deferred |
+
+--------------------------------------------
+
+# 4. NPC Simulation
+
+| Question | Status |
+| --- | --- |
+| Schedule depth | Deferred |
+| Needs simulation | Deferred |
+| Memory duration | Deferred |
+| Emotional modeling | Deferred |
+| Goal-planning complexity | Deferred |
+| Simulation tiers | Deferred |
+
+--------------------------------------------
+
+# 5. Progression and Gameplay
+
+| Question | Status |
+| --- | --- |
+| Profession mastery pacing | Deferred |
+| Combat architecture | Deferred |
+| Skill framework | Deferred |
+| Magic and spell-crafting architecture | Deferred |
+| Construction depth | Deferred |
+| Settlement founding | Deferred |

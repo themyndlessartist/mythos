@@ -1,2 +1,17 @@
 .DS_Store
 **/.DS_Store
+
+# Godot generated state
+.godot/
+**/.godot/
+
+# .NET generated output
+**/bin/
+**/obj/
+
+# Local editor and IDE state
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo

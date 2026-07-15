@@ -1,0 +1,18 @@
+; Engine configuration file.
+; Edit through the Godot editor when practical.
+
+config_version=5
+
+[application]
+
+config/name="Mythos Foundation Prototype"
+run/main_scene="res://PrototypeRoot.tscn"
+
+[dotnet]
+
+project/assembly_name="Mythos.Godot"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

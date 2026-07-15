@@ -30,3 +30,27 @@ The shared framework should remain setting-agnostic whenever practical. Framewor
 ## Implementation Policy
 
 All future implementation must be driven by approved documentation. Contributors and Codex sessions should read relevant approved documentation before modifying code, identify ambiguities before implementation, and update tests and technical documentation when behavior, interfaces, dependencies, or data formats change.
+
+## Development Toolchain
+
+The approved foundation prototype uses:
+
+- Godot 4.7 .NET edition
+- C# targeting .NET 10
+- The .NET 10 SDK
+
+Godot integration is located in `Source/Integration/Godot`. Authoritative framework code belongs in `Source/Core` and must remain independent of Godot APIs whenever practical.
+
+Run the complete macOS build and smoke verification with:
+
+```bash
+./Scripts/build.sh
+```
+
+On Windows PowerShell, set `GODOT_BIN` when the Godot executable is not available under the default script name, then run:
+
+```powershell
+./Scripts/build.ps1
+```
+
+The scripts build the solution, run the dependency-free smoke test, and validate the Godot project headlessly. Selection of a full automated test framework remains a pending foundation implementation decision.

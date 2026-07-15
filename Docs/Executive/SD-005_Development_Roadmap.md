@@ -32,7 +32,7 @@ Status: Complete
 
 # 4. Phase 2 — Foundation Specifications
 
-Status: In Progress
+Status: Complete
 
 Planned order:
 
@@ -61,7 +61,7 @@ Planned order:
 
 # 6. Phase 4 — Foundation Prototype
 
-Status: Approved — Not Started
+Status: In Progress
 
 Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype.md)
 

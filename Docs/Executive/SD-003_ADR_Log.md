@@ -44,3 +44,4 @@ ADR files are stored in `Docs/Architecture/ADR/`.
 | ADR-020 | Configurable Calendar | Approved | [ADR-020_Configurable_Calendar.md](../Architecture/ADR/ADR-020_Configurable_Calendar.md) |
 | ADR-021 | Event-Driven World State | Approved | [ADR-021_Event_Driven_World_State.md](../Architecture/ADR/ADR-021_Event_Driven_World_State.md) |
 | ADR-022 | Persistent World History | Approved | [ADR-022_Persistent_World_History.md](../Architecture/ADR/ADR-022_Persistent_World_History.md) |
+| ADR-023 | Godot and C# Technology Stack | Approved | [ADR-023_Godot_and_CSharp_Technology_Stack.md](../Architecture/ADR/ADR-023_Godot_and_CSharp_Technology_Stack.md) |

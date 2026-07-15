@@ -61,6 +61,10 @@ Planned order:
 
 # 6. Phase 4 — Foundation Prototype
 
+Status: Approved — Not Started
+
+Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype.md)
+
 - Minimal entity model
 - Event processing
 - Time progression

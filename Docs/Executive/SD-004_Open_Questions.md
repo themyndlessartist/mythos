@@ -14,7 +14,7 @@ Last Updated: July 2026
 
 This document records unresolved executive and architectural questions.
 
-Every item in this document is deferred, not rejected.
+Unresolved items in this document are deferred, not rejected. Resolved items identify their approving record.
 
 --------------------------------------------
 
@@ -22,8 +22,8 @@ Every item in this document is deferred, not rejected.
 
 | Question | Status |
 | --- | --- |
-| Final engine | Deferred |
-| Programming language | Deferred |
+| Final engine | Resolved by ADR-023: Godot 4.7 .NET |
+| Programming language | Resolved by ADR-023: C# |
 | Persistence and save format | Deferred |
 | Database strategy | Deferred |
 | Modding architecture | Deferred |

@@ -133,6 +133,7 @@ All tests must pass before M-001 can be accepted.
 
 - Follow [STD-001 Technical Architecture Standards](../Architecture/STD-001_Technical_Architecture_Standards.md).
 - Implement only behavior approved by SYS-001 through SYS-007.
+- Document reversible, milestone-local prototype choices under [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md).
 - Keep authoritative framework logic independent of Godot APIs whenever practical.
 - Use adapters for Godot lifecycle, input, rendering, and scene integration.
 - Do not make runtime C# classes the permanent save contract by default.
@@ -171,6 +172,7 @@ Failure to meet deterministic persistence or engine-separation requirements requ
 - [SD-002 Framework Overview](../Executive/SD-002_Framework_Overview.md)
 - [SD-005 Development Roadmap](../Executive/SD-005_Development_Roadmap.md)
 - [ADR-023 Godot and C# Technology Stack](../Architecture/ADR/ADR-023_Godot_and_CSharp_Technology_Stack.md)
+- [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)
 - [SYS-001 Entity Framework](../Systems/SYS-001_Entity_Framework.md)
 - [SYS-002 Event Framework](../Systems/SYS-002_Event_Framework.md)
 - [SYS-003 Time Framework](../Systems/SYS-003_Time_Framework.md)

@@ -1,10 +1,15 @@
-# SYS-002 — Event Framework Implementation Notes
+# SYS-002-IMPL-M-001 — Event Framework Implementation Notes
 
+- Document ID: SYS-002-IMPL-M-001
+- Title: Event Framework Implementation Notes
 - Related Specification: [SYS-002 Event Framework](SYS-002_Event_Framework.md)
 - Prototype Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype.md)
 - Implementation Version: 0.1
 - Status: In Progress
+- Owner: Mythos Executive Development
 - Last Updated: July 2026
+- Applies Through Commit: `af81805`
+- Approval/Decision References: [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)
 
 ## Implemented Scope
 
@@ -36,6 +41,8 @@ The M-001 prototype currently provides:
 - Referenced events require an injected validating boundary; the safe default rejects source, target, and Region references.
 
 ## Implementation Decisions
+
+The following decisions are reversible, prototype-local M-001 choices. They do not close or supersede deferred production decisions and remain replaceable under ADR-024.
 
 - M-001 uses synchronous, in-process dispatch.
 - Subscriber order is defined by explicit order followed by registration sequence.

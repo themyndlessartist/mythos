@@ -48,6 +48,10 @@ Planned order:
 
 # 5. Phase 3 — World Simulation Specifications
 
+Status: Planned
+
+Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prototype when dependencies permit.
+
 - Relationships
 - Reputation
 - Economy
@@ -76,6 +80,8 @@ Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype
 
 # 7. Phase 5 — Framework Alpha
 
+Status: Planned
+
 - Expand reusable systems
 - Add development and debugging tools
 - Validate modular title packages
@@ -84,6 +90,8 @@ Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype
 --------------------------------------------
 
 # 8. Phase 6 — First Mythos Title Pre-Production
+
+Status: Planned
 
 - Select first setting
 - Define title-specific scope

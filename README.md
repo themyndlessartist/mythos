@@ -10,7 +10,8 @@ The shared framework should remain setting-agnostic whenever practical. Framewor
 
 - `Docs/Executive/`: project charter, framework overview, ADR log, open questions, and development roadmap.
 - `Docs/Architecture/`: approved architecture documentation and future Architecture Decision Records.
-- `Docs/Systems/`: approved technical specifications for shared and title-specific systems.
+- `Docs/Systems/`: approved technical specifications and milestone-scoped implementation notes for shared and title-specific systems.
+- `Docs/Milestones/`: approved milestone scope, deliverables, acceptance criteria, and status documentation.
 - `Docs/Gameplay/`: approved gameplay design specifications and implementation notes.
 - `Docs/World/`: world simulation, setting, location, and content planning documentation.
 - `Docs/Writing/`: narrative, dialogue, terminology, and writing production documentation.
@@ -19,7 +20,7 @@ The shared framework should remain setting-agnostic whenever practical. Framewor
 - `Docs/QA/`: test plans, quality standards, bug triage processes, and release criteria.
 - `Docs/Tools/`: documentation for developer tools, pipelines, and editor workflows.
 - `Docs/Templates/`: reusable documentation templates.
-- `Source/`: future source code for core framework, systems, modules, integration, and debug support.
+- `Source/`: active source code for the core framework, systems, modules, integration, and debug support.
 - `Data/`: future schemas, definitions, settings, and test data.
 - `Assets/`: source assets and approved asset placeholders when applicable.
 - `Tools/`: project tooling source and utilities.
@@ -40,7 +41,7 @@ The approved foundation prototype uses:
 - The .NET 10 SDK
 - xUnit 3.2.0 for prototype unit-test tooling
 
-xUnit is explicitly approved for M-001 test tooling. It is not a runtime dependency and does not select a permanent testing stack for later milestones.
+xUnit is explicitly approved for M-001 test tooling by [ADR-024](Docs/Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md). It is not a runtime dependency and does not select a permanent testing stack for later milestones.
 
 Godot integration is located in `Source/Integration/Godot`. Authoritative framework code belongs in `Source/Core` and must remain independent of Godot APIs whenever practical.
 

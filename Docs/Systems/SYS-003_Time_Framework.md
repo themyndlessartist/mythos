@@ -178,9 +178,9 @@ It does not own domain outcomes produced by time-aware systems.
 Required conceptual dependencies:
 
 - [SYS-002 Event Framework](SYS-002_Event_Framework.md)
-- Save/Persistence Framework
+- [SYS-006 Save and Persistence Framework](SYS-006_Save_and_Persistence_Framework.md)
 - Configuration/Data Framework
-- Region Framework only if local time zones are later approved
+- [SYS-004 Region Framework](SYS-004_Region_Framework.md) only if local time zones are later approved
 
 Circular dependencies must be avoided.
 
@@ -321,6 +321,9 @@ SYS-003 is complete when it clearly defines:
 - [SD-002 Framework Overview](../Executive/SD-002_Framework_Overview.md)
 - [SYS-001 Entity Framework](SYS-001_Entity_Framework.md)
 - [SYS-002 Event Framework](SYS-002_Event_Framework.md)
+- [SYS-004 Region Framework](SYS-004_Region_Framework.md)
+- [SYS-006 Save and Persistence Framework](SYS-006_Save_and_Persistence_Framework.md)
 - [ADR-014 Hybrid Time](../Architecture/ADR/ADR-014_Hybrid_Time.md)
 - [ADR-015 Time Pause Rules](../Architecture/ADR/ADR-015_Time_Pause_Rules.md)
 - [ADR-020 Configurable Calendar](../Architecture/ADR/ADR-020_Configurable_Calendar.md)
+- [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)

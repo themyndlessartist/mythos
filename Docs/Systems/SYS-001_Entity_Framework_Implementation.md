@@ -1,10 +1,15 @@
-# SYS-001 — Entity Framework Implementation Notes
+# SYS-001-IMPL-M-001 — Entity Framework Implementation Notes
 
+- Document ID: SYS-001-IMPL-M-001
+- Title: Entity Framework Implementation Notes
 - Related Specification: [SYS-001 Entity Framework](SYS-001_Entity_Framework.md)
 - Prototype Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype.md)
 - Implementation Version: 0.1
 - Status: In Progress
+- Owner: Mythos Executive Development
 - Last Updated: July 2026
+- Applies Through Commit: `af81805`
+- Approval/Decision References: [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)
 
 ## Implemented Scope
 
@@ -30,6 +35,8 @@ The M-001 prototype currently provides:
 - Query indexes are intentionally deferred until prototype profiling demonstrates a need.
 
 ## Implementation Decisions
+
+The following decisions are reversible, prototype-local M-001 choices. They do not close or supersede deferred production decisions and remain replaceable under ADR-024.
 
 - UUIDv7 is the default prototype generator, isolated behind `IEntityIdGenerator` so the final ID strategy remains replaceable.
 - Public state is exposed through snapshots rather than mutable registry records.

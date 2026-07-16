@@ -1,10 +1,15 @@
-# SYS-003 — Time Framework Implementation Notes
+# SYS-003-IMPL-M-001 — Time Framework Implementation Notes
 
+- Document ID: SYS-003-IMPL-M-001
+- Title: Time Framework Implementation Notes
 - Related Specification: [SYS-003 Time Framework](SYS-003_Time_Framework.md)
 - Prototype Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype.md)
 - Implementation Version: 0.1
 - Status: In Progress
+- Owner: Mythos Executive Development
 - Last Updated: July 2026
+- Applies Through Commit: `af81805`
+- Approval/Decision References: [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)
 
 ## Implemented Scope
 
@@ -29,6 +34,8 @@ The M-001 prototype currently provides:
 Due schedules and layer markers are immutable descriptors. The framework does not execute gameplay callbacks or own outcomes produced by consuming systems. Schedule category and string metadata are opaque coordination data; their meaning remains with the registering domain.
 
 ## Implementation Decisions
+
+The following decisions are reversible, prototype-local M-001 choices. They do not close or supersede deferred production decisions and remain replaceable under ADR-024.
 
 - World units are deliberately abstract. A title calendar defines `UnitsPerDay`; the core does not name or assume seconds, minutes, Gregorian months, or a real-time day length.
 - Year and day numbering are zero-based and one-based respectively: the epoch is year 0, period 0, day 1, unit 0.

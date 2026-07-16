@@ -12,6 +12,8 @@ All notable changes to Mythos will be documented in this file.
 - Engine-independent Time Framework prototype with an authoritative clock, configurable calendars, rational time scaling, composable pause reasons, deterministic schedules and simulation layers, bounded catch-up, snapshots, and optional Event Framework publication.
 - Automated Entity, Event, and Time unit tests plus cross-platform build verification scripts.
 - Explicit approval and documentation of xUnit 3.2.0 as M-001 prototype test tooling.
+- Approved SD-001 through SD-005 executive documents, ADR-001 through ADR-024, STD-001, SYS-001 through SYS-007, and M-001 milestone documentation.
+- Established milestone-scoped implementation-note identity and prototype-decision governance through ADR-024.
 
 ### Changed
 

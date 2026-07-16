@@ -8,6 +8,7 @@ All notable changes to Mythos will be documented in this file.
 
 - Godot 4.7 .NET and C# foundation prototype scaffolding.
 - Engine-independent Entity Framework prototype with stable IDs, lifecycle state, tags, component references, hierarchy, ownership, region assignment, and serializable snapshots.
+- Deterministic Event Framework prototype with immutable envelopes, ordered subscriptions, filters, cancellation, failure isolation, recursion protection, and bounded diagnostics.
 - Automated entity unit tests and cross-platform build verification scripts.
 
 ## [0.1.0] - 2026-07-11

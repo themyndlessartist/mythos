@@ -1,4 +1,5 @@
 using Mythos.Framework;
+using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Time;
@@ -39,5 +40,25 @@ if (!root.IsSuccess || !child.IsSuccess || !actor.IsSuccess ||
     return 1;
 }
 
+var characterEntity = entities.Create(new EntityCategory("Character"), clock.Timestamp.Value).Value!;
+var characters = new CharacterRegistry(entities, new SmokeCharacterReferences());
+var character = characters.Register(new CharacterProfileSnapshot(
+    characterEntity.Id,
+    new CharacterIdentity("neutral-fixture"),
+    new CharacterStatusId("available"),
+    new LifeStageId("established")));
+if (!character.IsSuccess || !characters.ValidateReferences().IsSuccess)
+{
+    Console.Error.WriteLine("Character Framework smoke validation failed.");
+    return 1;
+}
+
 Console.WriteLine("Mythos framework smoke test passed.");
 return 0;
+
+file sealed class SmokeCharacterReferences : ICharacterReferenceValidator
+{
+    public bool IsKnownStatus(CharacterStatusId statusId) => statusId == new CharacterStatusId("available");
+
+    public bool IsKnownLifeStage(LifeStageId lifeStageId) => lifeStageId == new LifeStageId("established");
+}

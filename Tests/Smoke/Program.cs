@@ -1,4 +1,6 @@
 using Mythos.Framework;
+using Mythos.Framework.Entities;
+using Mythos.Framework.Regions;
 using Mythos.Framework.Time;
 
 if (FrameworkAssembly.Name != "Mythos.Framework")
@@ -19,6 +21,21 @@ var advance = clock.Advance(new WorldDuration(1));
 if (!advance.IsSuccess || advance.CurrentTimestamp.Value != 1 || advance.DueTasks.Count != 1)
 {
     Console.Error.WriteLine("Time Framework smoke validation failed.");
+    return 1;
+}
+
+var entities = new EntityRegistry();
+var regions = new RegionFramework(entities);
+var root = regions.CreateRoot(new RegionCategory("WorldScope"), clock.Timestamp.Value);
+var child = root.IsSuccess
+    ? regions.CreateRegion(new RegionCategory("NeutralArea"), root.Value!.Id, clock.Timestamp.Value)
+    : default;
+var actor = entities.Create(new EntityCategory("Character"), clock.Timestamp.Value);
+if (!root.IsSuccess || !child.IsSuccess || !actor.IsSuccess ||
+    !regions.AssignEntity(actor.Value!.Id, child.Value!.Id).IsSuccess ||
+    regions.QueryAssignedEntities(child.Value.Id).Count != 1)
+{
+    Console.Error.WriteLine("Region Framework smoke validation failed.");
     return 1;
 }
 

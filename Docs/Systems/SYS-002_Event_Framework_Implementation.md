@@ -40,6 +40,7 @@ The M-001 prototype currently provides:
 - M-001 uses synchronous, in-process dispatch.
 - Subscriber order is defined by explicit order followed by registration sequence.
 - Batch event priority uses an integer where higher values dispatch first.
+- Every dispatch result carries its zero-based original batch request index; successful dispatch order remains priority then publication sequence.
 - Handler exceptions are captured as structured errors and do not prevent later handlers from running.
 - A canceled event stops subsequent subscribers after the canceling handler completes.
 - Nested dispatch is limited to 32 active levels.
@@ -69,7 +70,7 @@ Automated tests cover:
 - Handler-failure isolation
 - Duplicate IDs and invalid references
 - Safe default reference rejection; source, all-target, Region-category, missing, and terminal reference validation
-- Correlation, causation, and mixed valid/invalid batch validation
+- Correlation, causation, and request-indexed mixed valid/invalid batch validation
 - Bounded diagnostics
 - Nested-dispatch protection
 - Subscription conflicts and removal

@@ -32,4 +32,31 @@ public sealed class SimulationLayerTests
         Assert.True(limited);
         Assert.Equal(4, Assert.Single(next).Tick);
     }
+
+    [Fact]
+    public void RestoreRejectsMaximumSequenceAtomically()
+    {
+        var layers = new SimulationLayerCoordinator();
+        Assert.True(layers.Register(new SimulationLayerId("existing"), new WorldDuration(2), new WorldTimestamp(0)).IsSuccess);
+        var invalid = new[]
+        {
+            new SimulationLayerSnapshot(new SimulationLayerId("invalid"), new WorldDuration(1), new WorldTimestamp(0), long.MaxValue, 1),
+        };
+
+        var result = layers.Restore(invalid, new WorldTimestamp(0));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(TimeErrorCodes.InvalidSnapshot, result.Error!.Code);
+        Assert.Equal("existing", Assert.Single(layers.ExportSnapshots()).Id.Value);
+    }
+
+    [Fact]
+    public void ExportedSnapshotCollectionIsReadOnly()
+    {
+        var layers = new SimulationLayerCoordinator();
+        layers.Register(new SimulationLayerId("layer"), new WorldDuration(1), new WorldTimestamp(0));
+        var snapshots = layers.ExportSnapshots();
+
+        Assert.Throws<NotSupportedException>(() => ((IList<SimulationLayerSnapshot>)snapshots)[0] = snapshots[0]);
+    }
 }

@@ -52,6 +52,11 @@ public sealed class CalendarModel
             return CalendarModelResult.Failure("Calendar requires a positive version, positive units per day, and at least one period.");
         }
 
+        if (definition.Periods.Any(period => period is null) || definition.Seasons.Any(season => season is null))
+        {
+            return CalendarModelResult.Failure("Calendar periods and seasons cannot contain null entries.");
+        }
+
         if (definition.Periods.Any(period => string.IsNullOrWhiteSpace(period.Id) || period.LengthInDays <= 0) ||
             definition.Periods.Select(period => period.Id).Distinct(StringComparer.Ordinal).Count() != definition.Periods.Count)
         {

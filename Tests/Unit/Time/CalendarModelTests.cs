@@ -37,8 +37,10 @@ public sealed class CalendarModelTests
         Definition(periods: []),
         Definition(periods: [new("same", 1), new("same", 2)]),
         Definition(periods: [new("bad", 0)]),
+        Definition(periods: [null!]),
         Definition(seasons: [new("bad", 8)]),
         Definition(seasons: [new("same", 1), new("same", 2)]),
+        Definition(seasons: [null!]),
     };
 
     internal static CalendarModel CreateCalendar() => CalendarModel.Create(Definition()).Value!;

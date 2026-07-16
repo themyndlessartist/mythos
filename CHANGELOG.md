@@ -20,6 +20,10 @@ All notable changes to Mythos will be documented in this file.
 - Changed Event reference handling to reject referenced events by default unless an explicit validator is supplied, with consistent source, target, Region-category, missing, and terminal-state validation.
 - Added malformed Entity snapshot, Event reference, correlation/causation, and mixed-batch tests.
 - Corrected development documentation to describe the complete test pipeline and distinguish Event Framework availability from deferred Entity event publication.
+- Made Time scheduler, simulation-layer, and clock restoration atomic with structured rejection of malformed and sequence-exhausted state.
+- Hardened Entity tag/component mutation identifiers and Calendar/pause restoration validation.
+- Added original request indices to Event dispatch results so mixed batches remain correlatable without changing priority dispatch order.
+- Made Time snapshot collections defensive and read-only, and made Time Event bridge registration rollback atomic.
 
 ## [0.1.0] - 2026-07-11
 

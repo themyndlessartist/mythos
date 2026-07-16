@@ -75,6 +75,8 @@ public sealed class WorldClockTests
         Assert.Equal(before.Scale, after.Scale);
         Assert.Equal(before.ScaleRemainder, after.ScaleRemainder);
         Assert.Equal(before.PauseReasons, after.PauseReasons);
+        Assert.NotNull(before.Schedules);
+        Assert.NotNull(after.Schedules);
         var beforeSchedule = Assert.Single(before.Schedules);
         var afterSchedule = Assert.Single(after.Schedules);
         Assert.Equal(beforeSchedule.Id, afterSchedule.Id);
@@ -91,13 +93,94 @@ public sealed class WorldClockTests
     [Fact]
     public void RestoreRejectsCalendarMismatchAndOverdueSchedule()
     {
-        var snapshot = Clock().CreateSnapshot() with { CalendarVersion = 99 };
+        var source = Clock().CreateSnapshot();
+        var snapshot = Copy(source, calendarVersion: 99);
 
         var result = WorldClock.Restore(snapshot, CalendarModelTests.CreateCalendar());
 
         Assert.False(result.IsSuccess);
         Assert.Equal(TimeErrorCodes.InvalidSnapshot, result.Error!.Code);
     }
+
+    [Fact]
+    public void RestoreRejectsInvalidPauseIdentifiers()
+    {
+        var source = Clock().CreateSnapshot();
+
+        var defaultReason = WorldClock.Restore(Copy(source, pauseReasons: [default]), CalendarModelTests.CreateCalendar());
+
+        Assert.False(defaultReason.IsSuccess);
+        Assert.Equal(TimeErrorCodes.InvalidSnapshot, defaultReason.Error!.Code);
+    }
+
+    [Fact]
+    public void RestoreRejectsMalformedNestedStateWithoutThrowing()
+    {
+        var source = Clock().CreateSnapshot();
+        var invalidSchedule = new ScheduledTaskSnapshot(
+            new ScheduleId("invalid"),
+            new WorldTimestamp(1),
+            null,
+            "test",
+            new Dictionary<string, string>(),
+            long.MaxValue,
+            0);
+        var invalidLayer = new SimulationLayerSnapshot(
+            new SimulationLayerId("invalid"),
+            new WorldDuration(1),
+            new WorldTimestamp(0),
+            long.MaxValue,
+            1);
+
+        var scheduleResult = WorldClock.Restore(Copy(source, schedules: [invalidSchedule]), CalendarModelTests.CreateCalendar());
+        var layerResult = WorldClock.Restore(Copy(source, simulationLayers: [invalidLayer]), CalendarModelTests.CreateCalendar());
+
+        Assert.False(scheduleResult.IsSuccess);
+        Assert.False(layerResult.IsSuccess);
+        Assert.Equal(TimeErrorCodes.InvalidSnapshot, scheduleResult.Error!.Code);
+        Assert.Equal(TimeErrorCodes.InvalidSnapshot, layerResult.Error!.Code);
+    }
+
+    [Fact]
+    public void SnapshotCollectionsAreDefensiveAndReadOnly()
+    {
+        var pauses = new[] { new PauseReason("menu") };
+        var schedules = Array.Empty<ScheduledTaskSnapshot>();
+        var layers = Array.Empty<SimulationLayerSnapshot>();
+        var source = Clock().CreateSnapshot();
+        var snapshot = new WorldClockSnapshot(
+            source.Version,
+            source.Timestamp,
+            source.Scale,
+            source.ScaleRemainder,
+            pauses,
+            source.CalendarId,
+            source.CalendarVersion,
+            schedules,
+            layers);
+        pauses[0] = new PauseReason("changed");
+
+        Assert.Equal("menu", Assert.Single(snapshot.PauseReasons!).Value);
+        Assert.Throws<NotSupportedException>(() => ((IList<PauseReason>)snapshot.PauseReasons!)[0] = new PauseReason("blocked"));
+        Assert.Throws<NotSupportedException>(() => ((IList<ScheduledTaskSnapshot>)snapshot.Schedules!).Add(null!));
+        Assert.Throws<NotSupportedException>(() => ((IList<SimulationLayerSnapshot>)snapshot.SimulationLayers!).Add(null!));
+    }
+
+    private static WorldClockSnapshot Copy(
+        WorldClockSnapshot source,
+        IReadOnlyList<PauseReason>? pauseReasons = null,
+        int? calendarVersion = null,
+        IReadOnlyList<ScheduledTaskSnapshot>? schedules = null,
+        IReadOnlyList<SimulationLayerSnapshot>? simulationLayers = null) => new(
+        source.Version,
+        source.Timestamp,
+        source.Scale,
+        source.ScaleRemainder,
+        pauseReasons ?? source.PauseReasons,
+        source.CalendarId,
+        calendarVersion ?? source.CalendarVersion,
+        schedules ?? source.Schedules,
+        simulationLayers ?? source.SimulationLayers);
 
     private static WorldClock Clock(WorldTimestamp timestamp = default) => new(CalendarModelTests.CreateCalendar(), timestamp);
 }

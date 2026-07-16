@@ -35,6 +35,7 @@ public enum EventDispatchStatus
 }
 
 public sealed record EventDispatchResult(
+    int RequestIndex,
     EventEnvelope? Event,
     EventDispatchStatus Status,
     IReadOnlyList<SubscriberId> InvokedSubscribers,

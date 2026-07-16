@@ -21,4 +21,30 @@ public sealed class TimeEventBridgeTests
         Assert.Equal(["advance", "due"], seen);
         Assert.All(dispatch, result => Assert.True(result.IsSuccessful));
     }
+
+    [Fact]
+    public void CreateRollsBackOnlyTypeRegisteredByFailedAttempt()
+    {
+        var bus = new EventBus();
+        Assert.True(bus.RegisterEventType<ScheduledTaskDueEvent>(TimeEventBridge.ScheduledTaskDueType).IsSuccess);
+
+        var result = TimeEventBridge.Create(bus);
+
+        Assert.False(result.IsSuccess);
+        Assert.True(bus.RegisterEventType<TimeAdvancedEvent>(TimeEventBridge.TimeAdvancedType).IsSuccess);
+        Assert.False(bus.RegisterEventType<ScheduledTaskDueEvent>(TimeEventBridge.ScheduledTaskDueType).IsSuccess);
+    }
+
+    [Fact]
+    public void CreateDoesNotRemovePreExistingFirstType()
+    {
+        var bus = new EventBus();
+        Assert.True(bus.RegisterEventType<TimeAdvancedEvent>(TimeEventBridge.TimeAdvancedType).IsSuccess);
+
+        var result = TimeEventBridge.Create(bus);
+
+        Assert.False(result.IsSuccess);
+        Assert.False(bus.RegisterEventType<TimeAdvancedEvent>(TimeEventBridge.TimeAdvancedType).IsSuccess);
+        Assert.True(bus.RegisterEventType<ScheduledTaskDueEvent>(TimeEventBridge.ScheduledTaskDueType).IsSuccess);
+    }
 }

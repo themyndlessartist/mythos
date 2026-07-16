@@ -102,6 +102,33 @@ public sealed class TimeSchedulerTests
         Assert.Equal(TimeErrorCodes.InvalidSnapshot, result.Error!.Code);
     }
 
+    [Fact]
+    public void RestoreRejectsMaximumSequenceAtomically()
+    {
+        var scheduler = new TimeScheduler();
+        Assert.True(scheduler.ScheduleAbsolute(Id("existing"), At(5), At(0), "test").IsSuccess);
+        var invalid = new[]
+        {
+            new ScheduledTaskSnapshot(Id("invalid"), At(10), null, "test", new Dictionary<string, string>(), long.MaxValue, 0),
+        };
+
+        var result = scheduler.Restore(invalid, At(0));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(TimeErrorCodes.InvalidSnapshot, result.Error!.Code);
+        Assert.Equal("existing", Assert.Single(scheduler.ExportSnapshots()).Id.Value);
+    }
+
+    [Fact]
+    public void ExportedSnapshotCollectionIsReadOnly()
+    {
+        var scheduler = new TimeScheduler();
+        scheduler.ScheduleAbsolute(Id("one"), At(1), At(0), "test");
+        var snapshots = scheduler.ExportSnapshots();
+
+        Assert.Throws<NotSupportedException>(() => ((IList<ScheduledTaskSnapshot>)snapshots)[0] = snapshots[0]);
+    }
+
     private static ScheduleId Id(string value) => new(value);
     private static WorldTimestamp At(long value) => new(value);
 }

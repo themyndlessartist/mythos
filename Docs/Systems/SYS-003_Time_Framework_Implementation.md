@@ -42,11 +42,11 @@ Due schedules and layer markers are immutable descriptors. The framework does no
 
 ## Persistence and Restore Behavior
 
-The prototype snapshot is versioned but is not a final serialized save schema. Restore requires the exact calendar ID and version supplied by configuration. It rejects incompatible versions, invalid rational scale state, duplicate pause reasons, overdue schedules, duplicate IDs, invalid recurrence, and invalid layer progress. Restore does not dispatch due work and therefore cannot duplicate scheduled outcomes merely by loading.
+The prototype snapshot is versioned but is not a final serialized save schema. Restore requires the exact calendar ID and version supplied by configuration. It rejects incompatible versions, invalid rational scale state, invalid or duplicate pause reasons, overdue schedules, duplicate IDs, exhausted ordering sequences, invalid recurrence, null calendar entries, and invalid layer progress. Scheduler and simulation-layer replacements are prepared off-instance and swapped only after complete validation, so failed direct or `WorldClock` restoration leaves live state unchanged and returns structured errors. Restore does not dispatch due work and therefore cannot duplicate scheduled outcomes merely by loading.
 
 ## Failure and Diagnostics Behavior
 
-Domain boundary failures use stable `time.*` error codes. Primitive value constructors reject negative timestamps and durations immediately. Advance overflow is atomic and leaves the timestamp and fractional scale state unchanged. Catch-up limits are reported on successful advances and pending due state remains inspectable through deterministic snapshot export.
+Domain boundary failures use stable `time.*` error codes. Primitive value constructors reject negative timestamps and durations immediately. Advance and restoration failures are atomic. Snapshot collection projections defensively copy and expose read-only wrappers. `TimeEventBridge.Create` rolls back only event-type registrations made by its failed attempt. Catch-up limits are reported on successful advances and pending due state remains inspectable through deterministic snapshot export.
 
 ## Known Limitations and Deferred Work
 
@@ -59,4 +59,4 @@ Domain boundary failures use stable `time.*` error codes. Primitive value constr
 
 ## Verification
 
-Automated tests cover clock and scale advancement, invalid time, calendar validation and interpretation, pause reasons, absolute/relative/recurring schedules, deterministic ordering, cancellation, large skips, storm bounds, simulation-layer progress, recurrence snapshot restoration, incompatible restore state, metadata isolation, and Event Framework publication. The repository build script additionally runs the smoke executable and headless Godot import and entry-scene checks.
+Automated tests cover clock and scale advancement, invalid time, null calendar entries, pause reasons, absolute/relative/recurring schedules, deterministic ordering, cancellation, large skips, storm bounds, simulation-layer progress, atomic snapshot restoration, maximum-sequence rejection, read-only snapshot collections, metadata isolation, Event Framework publication, and adapter-registration rollback. The repository build script additionally runs the smoke executable and headless Godot import and entry-scene checks.

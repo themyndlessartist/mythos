@@ -30,7 +30,7 @@ public sealed record SimulationLayerDue(
 /// </summary>
 public sealed class SimulationLayerCoordinator
 {
-    private readonly Dictionary<SimulationLayerId, LayerState> layers = [];
+    private Dictionary<SimulationLayerId, LayerState> layers = [];
     private long nextSequence;
 
     public TimeOperationResult Register(SimulationLayerId id, WorldDuration interval, WorldTimestamp currentTime)
@@ -43,6 +43,11 @@ public sealed class SimulationLayerCoordinator
         if (layers.ContainsKey(id))
         {
             return TimeOperationResult.Failure(TimeErrorCodes.DuplicateScheduleId, $"Simulation layer '{id}' already exists.");
+        }
+
+        if (nextSequence == long.MaxValue)
+        {
+            return TimeOperationResult.Failure(TimeErrorCodes.Overflow, "Simulation layer registration sequence is exhausted.");
         }
 
         layers.Add(id, new LayerState(id, interval, currentTime, nextSequence++));
@@ -79,35 +84,41 @@ public sealed class SimulationLayerCoordinator
         return result;
     }
 
-    public IReadOnlyList<SimulationLayerSnapshot> ExportSnapshots() => layers.Values
+    public IReadOnlyList<SimulationLayerSnapshot> ExportSnapshots() => Array.AsReadOnly(layers.Values
         .OrderBy(state => state.RegistrationSequence)
         .Select(state => new SimulationLayerSnapshot(state.Id, state.Interval, state.LastProcessedAt, state.RegistrationSequence, state.Tick + 1))
-        .ToArray();
+        .ToArray());
 
-    public TimeOperationResult Restore(IEnumerable<SimulationLayerSnapshot> snapshots, WorldTimestamp currentTime)
+    public TimeOperationResult Restore(IEnumerable<SimulationLayerSnapshot>? snapshots, WorldTimestamp currentTime)
     {
-        ArgumentNullException.ThrowIfNull(snapshots);
+        if (snapshots is null)
+        {
+            return TimeOperationResult.Failure(TimeErrorCodes.InvalidSnapshot, "Simulation layer snapshot collection cannot be null.");
+        }
+
         var restored = snapshots.ToArray();
         if (restored.Any(item => item is null) ||
             restored.Select(item => item.Id).Distinct().Count() != restored.Length ||
             restored.Select(item => item.RegistrationSequence).Distinct().Count() != restored.Length ||
             restored.Any(item => string.IsNullOrWhiteSpace(item.Id.Value) || item.Interval.Value == 0 || item.LastProcessedAt.Value > currentTime.Value ||
-                item.RegistrationSequence < 0 || item.NextTick <= 0))
+                item.RegistrationSequence < 0 || item.RegistrationSequence == long.MaxValue || item.NextTick <= 0))
         {
             return TimeOperationResult.Failure(TimeErrorCodes.InvalidSnapshot, "Simulation layer snapshot contains invalid or duplicate state.");
         }
 
-        layers.Clear();
+        var replacementLayers = new Dictionary<SimulationLayerId, LayerState>();
         foreach (var snapshot in restored)
         {
             var state = new LayerState(snapshot.Id, snapshot.Interval, snapshot.LastProcessedAt, snapshot.RegistrationSequence)
             {
                 Tick = snapshot.NextTick - 1,
             };
-            layers.Add(state.Id, state);
+            replacementLayers.Add(state.Id, state);
         }
 
-        nextSequence = restored.Length == 0 ? 0 : checked(restored.Max(item => item.RegistrationSequence) + 1);
+        var replacementNextSequence = restored.Length == 0 ? 0 : restored.Max(item => item.RegistrationSequence) + 1;
+        layers = replacementLayers;
+        nextSequence = replacementNextSequence;
         return TimeOperationResult.Success();
     }
 

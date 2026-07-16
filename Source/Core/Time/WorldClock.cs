@@ -1,15 +1,39 @@
 namespace Mythos.Framework.Time;
 
-public sealed record WorldClockSnapshot(
-    int Version,
-    WorldTimestamp Timestamp,
-    TimeScale Scale,
-    long ScaleRemainder,
-    IReadOnlyList<PauseReason> PauseReasons,
-    CalendarId CalendarId,
-    int CalendarVersion,
-    IReadOnlyList<ScheduledTaskSnapshot> Schedules,
-    IReadOnlyList<SimulationLayerSnapshot> SimulationLayers);
+public sealed record WorldClockSnapshot
+{
+    public WorldClockSnapshot(
+        int version,
+        WorldTimestamp timestamp,
+        TimeScale scale,
+        long scaleRemainder,
+        IReadOnlyList<PauseReason>? pauseReasons,
+        CalendarId calendarId,
+        int calendarVersion,
+        IReadOnlyList<ScheduledTaskSnapshot>? schedules,
+        IReadOnlyList<SimulationLayerSnapshot>? simulationLayers)
+    {
+        Version = version;
+        Timestamp = timestamp;
+        Scale = scale;
+        ScaleRemainder = scaleRemainder;
+        PauseReasons = pauseReasons is null ? null : Array.AsReadOnly(pauseReasons.ToArray());
+        CalendarId = calendarId;
+        CalendarVersion = calendarVersion;
+        Schedules = schedules is null ? null : Array.AsReadOnly(schedules.ToArray());
+        SimulationLayers = simulationLayers is null ? null : Array.AsReadOnly(simulationLayers.ToArray());
+    }
+
+    public int Version { get; }
+    public WorldTimestamp Timestamp { get; }
+    public TimeScale Scale { get; }
+    public long ScaleRemainder { get; }
+    public IReadOnlyList<PauseReason>? PauseReasons { get; }
+    public CalendarId CalendarId { get; }
+    public int CalendarVersion { get; }
+    public IReadOnlyList<ScheduledTaskSnapshot>? Schedules { get; }
+    public IReadOnlyList<SimulationLayerSnapshot>? SimulationLayers { get; }
+}
 
 public sealed record TimeAdvanceResult(
     bool IsSuccess,
@@ -47,7 +71,7 @@ public sealed class WorldClock
     public TimeScheduler Scheduler { get; }
     public SimulationLayerCoordinator SimulationLayers { get; }
     public bool IsPaused => pauseReasons.Count > 0;
-    public IReadOnlyList<PauseReason> PauseReasons => pauseReasons.OrderBy(reason => reason.Value, StringComparer.Ordinal).ToArray();
+    public IReadOnlyList<PauseReason> PauseReasons => Array.AsReadOnly(pauseReasons.OrderBy(reason => reason.Value, StringComparer.Ordinal).ToArray());
 
     public TimeOperationResult SetScale(TimeScale scale)
     {
@@ -115,12 +139,14 @@ public sealed class WorldClock
         Scheduler.ExportSnapshots(),
         SimulationLayers.ExportSnapshots());
 
-    public static WorldClockRestoreResult Restore(WorldClockSnapshot? snapshot, CalendarModel calendar)
+    public static WorldClockRestoreResult Restore(WorldClockSnapshot? snapshot, CalendarModel? calendar)
     {
-        if (snapshot is null || snapshot.PauseReasons is null || snapshot.Schedules is null || snapshot.SimulationLayers is null ||
+        if (snapshot is null || calendar is null || snapshot.PauseReasons is null || snapshot.Schedules is null || snapshot.SimulationLayers is null ||
             snapshot.Version != SnapshotVersion || snapshot.CalendarId != calendar.Definition.Id ||
             snapshot.CalendarVersion != calendar.Definition.Version || snapshot.Scale.Denominator <= 0 || snapshot.Scale.Numerator < 0 ||
-            snapshot.ScaleRemainder < 0 || snapshot.ScaleRemainder >= snapshot.Scale.Denominator || snapshot.PauseReasons.Distinct().Count() != snapshot.PauseReasons.Count)
+            snapshot.ScaleRemainder < 0 || snapshot.ScaleRemainder >= snapshot.Scale.Denominator ||
+            snapshot.PauseReasons.Any(reason => string.IsNullOrWhiteSpace(reason.Value)) ||
+            snapshot.PauseReasons.Distinct().Count() != snapshot.PauseReasons.Count)
         {
             return WorldClockRestoreResult.Failure("Clock snapshot is invalid or incompatible with the supplied calendar.");
         }

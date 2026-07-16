@@ -100,8 +100,8 @@ public sealed class EventBus
     {
         var created = CreateEnvelope(request);
         return created.Error is not null
-            ? Reject(null, created.Error)
-            : Dispatch(created.Envelope!);
+            ? Reject(0, null, created.Error)
+            : Dispatch(0, created.Envelope!);
     }
 
     public IReadOnlyList<EventDispatchResult> PublishBatch(IEnumerable<EventRequest> requests)
@@ -109,19 +109,18 @@ public sealed class EventBus
         ArgumentNullException.ThrowIfNull(requests);
 
         var prepared = requests
-            .Select(CreateEnvelope)
+            .Select((request, requestIndex) => CreateEnvelope(request) with { RequestIndex = requestIndex })
             .ToArray();
 
         var rejected = prepared
             .Where(item => item.Error is not null)
-            .Select(item => Reject(null, item.Error!));
+            .Select(item => Reject(item.RequestIndex, null, item.Error!));
 
         var dispatchable = prepared
             .Where(item => item.Envelope is not null)
-            .Select(item => item.Envelope!)
-            .OrderByDescending(envelope => envelope.Priority)
-            .ThenBy(envelope => envelope.PublicationSequence)
-            .Select(Dispatch);
+            .OrderByDescending(item => item.Envelope!.Priority)
+            .ThenBy(item => item.Envelope!.PublicationSequence)
+            .Select(item => Dispatch(item.RequestIndex, item.Envelope!));
 
         return rejected.Concat(dispatchable).ToArray();
     }
@@ -136,6 +135,17 @@ public sealed class EventBus
                 .Select(subscription => subscription.SubscriberId)
                 .ToArray()
             : [];
+
+    internal EventOperationResult UnregisterEventType(EventType eventType)
+    {
+        if (!eventTypes.Remove(eventType))
+        {
+            return EventOperationResult.Failure(EventErrorCodes.UnknownEventType, $"Event type '{eventType}' is not registered.");
+        }
+
+        subscriptions.Remove(eventType);
+        return EventOperationResult.Success();
+    }
 
     private PreparedEvent CreateEnvelope(EventRequest request)
     {
@@ -203,11 +213,11 @@ public sealed class EventBus
         return PreparedEvent.Success(envelope);
     }
 
-    private EventDispatchResult Dispatch(EventEnvelope envelope)
+    private EventDispatchResult Dispatch(int requestIndex, EventEnvelope envelope)
     {
         if (dispatchDepth >= MaximumDispatchDepth)
         {
-            return Reject(envelope, new EventError(EventErrorCodes.RecursionLimit, "Maximum nested event dispatch depth was exceeded."));
+            return Reject(requestIndex, envelope, new EventError(EventErrorCodes.RecursionLimit, "Maximum nested event dispatch depth was exceeded."));
         }
 
         dispatchDepth++;
@@ -254,13 +264,13 @@ public sealed class EventBus
                     if (context.IsCanceled)
                     {
                         Trace(EventDiagnosticKind.Canceled, envelope, subscription.SubscriberId, null);
-                        return new EventDispatchResult(envelope, EventDispatchStatus.Canceled, invoked, errors);
+                        return new EventDispatchResult(requestIndex, envelope, EventDispatchStatus.Canceled, invoked, errors);
                     }
                 }
             }
 
             Trace(EventDiagnosticKind.Dispatched, envelope, null, null);
-            return new EventDispatchResult(envelope, EventDispatchStatus.Dispatched, invoked, errors);
+            return new EventDispatchResult(requestIndex, envelope, EventDispatchStatus.Dispatched, invoked, errors);
         }
         finally
         {
@@ -268,10 +278,10 @@ public sealed class EventBus
         }
     }
 
-    private EventDispatchResult Reject(EventEnvelope? envelope, EventError error)
+    private EventDispatchResult Reject(int requestIndex, EventEnvelope? envelope, EventError error)
     {
         Trace(EventDiagnosticKind.Rejected, envelope, error.SubscriberId, error.Message);
-        return new EventDispatchResult(envelope, EventDispatchStatus.Rejected, [], [error]);
+        return new EventDispatchResult(requestIndex, envelope, EventDispatchStatus.Rejected, [], [error]);
     }
 
     private void Trace(
@@ -308,7 +318,7 @@ public sealed class EventBus
         int Order,
         long RegistrationSequence);
 
-    private sealed record PreparedEvent(EventEnvelope? Envelope, EventError? Error)
+    private sealed record PreparedEvent(EventEnvelope? Envelope, EventError? Error, int RequestIndex = 0)
     {
         public static PreparedEvent Success(EventEnvelope envelope) => new(envelope, null);
 

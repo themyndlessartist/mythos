@@ -57,6 +57,7 @@ public sealed class EventBusTests
         ]);
 
         Assert.All(results, result => Assert.True(result.IsSuccessful));
+        Assert.Equal([1, 2, 0], results.Select(result => result.RequestIndex));
         Assert.Equal([2, 3, 1], values);
     }
 
@@ -255,21 +256,41 @@ public sealed class EventBusTests
     }
 
     [Fact]
-    public void BatchIsolatesInvalidCorrelationFromValidRequest()
+    public void BatchCorrelatesValidBeforeInvalidRequests()
     {
         var values = new List<int>();
         var bus = RegisteredBus();
         bus.Subscribe(TestEvent, new SubscriberId("collector"), context => values.Add(((TestPayload)context.Event.Payload).Value));
 
         var results = bus.PublishBatch([
-            Request(new TestPayload(1), correlationId: new EventId(Guid.Empty)),
-            Request(new TestPayload(2), correlationId: new EventId(Guid.CreateVersion7())),
+            Request(new TestPayload(1), correlationId: new EventId(Guid.CreateVersion7())),
+            Request(new TestPayload(2), correlationId: new EventId(Guid.Empty)),
         ]);
 
         Assert.Equal(2, results.Count);
         Assert.Equal(EventDispatchStatus.Rejected, results[0].Status);
+        Assert.Equal(1, results[0].RequestIndex);
         Assert.True(results[1].IsSuccessful);
-        Assert.Equal([2], values);
+        Assert.Equal(0, results[1].RequestIndex);
+        Assert.Equal([1], values);
+    }
+
+    [Fact]
+    public void BatchCorrelatesMultipleMixedFailures()
+    {
+        var bus = RegisteredBus();
+
+        var results = bus.PublishBatch([
+            Request(new TestPayload(1), priority: 1),
+            Request(new TestPayload(2), correlationId: new EventId(Guid.Empty)),
+            Request("wrong"),
+            Request(new TestPayload(3), priority: 5),
+        ]);
+
+        Assert.Equal([1, 2, 3, 0], results.Select(result => result.RequestIndex));
+        Assert.Equal(
+            [EventDispatchStatus.Rejected, EventDispatchStatus.Rejected, EventDispatchStatus.Dispatched, EventDispatchStatus.Dispatched],
+            results.Select(result => result.Status));
     }
 
     [Fact]

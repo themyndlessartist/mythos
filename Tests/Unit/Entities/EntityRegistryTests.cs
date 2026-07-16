@@ -56,6 +56,40 @@ public sealed class EntityRegistryTests
     }
 
     [Fact]
+    public void TagAndComponentMutationsRejectUninitializedIdentifiers()
+    {
+        var id = Id(1);
+        var registry = RegistryWith(id);
+
+        var addTag = registry.AddTag(id, default);
+        var removeTag = registry.RemoveTag(id, default);
+        var addComponent = registry.RegisterComponent(id, default);
+        var removeComponent = registry.RemoveComponent(id, default);
+
+        Assert.All([addTag, removeTag, addComponent, removeComponent], result =>
+        {
+            Assert.False(result.IsSuccess);
+            Assert.Equal(EntityErrorCodes.InvalidIdentifier, result.Error!.Code);
+        });
+    }
+
+    [Fact]
+    public void SuccessfullyExportedMutationStateCanBeRestored()
+    {
+        var id = Id(1);
+        var source = RegistryWith(id);
+        Assert.True(source.AddTag(id, new EntityTag("Persistent")).IsSuccess);
+        Assert.True(source.RegisterComponent(id, new ComponentTypeId("CharacterData")).IsSuccess);
+        var exported = Assert.Single(source.ExportSnapshots());
+
+        var restored = new EntityRegistry().Register(exported);
+
+        Assert.True(restored.IsSuccess);
+        Assert.Equal("Persistent", Assert.Single(restored.Value!.Tags!).Value);
+        Assert.Equal("CharacterData", Assert.Single(restored.Value.ComponentTypes!).Value);
+    }
+
+    [Fact]
     public void TerminalEntityRemainsReferenceableAndCannotReactivate()
     {
         var id = Id(1);

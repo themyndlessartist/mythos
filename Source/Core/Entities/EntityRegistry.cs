@@ -109,29 +109,33 @@ public sealed class EntityRegistry
     public IReadOnlyList<EntitySnapshot> EnumerateRegion(EntityId regionId) =>
         SnapshotWhere(state => state.RegionId == regionId);
 
-    public EntityResult AddTag(EntityId id, EntityTag tag) =>
-        WithEntity(id, state =>
+    public EntityResult AddTag(EntityId id, EntityTag tag) => string.IsNullOrWhiteSpace(tag.Value)
+        ? EntityResult.Failure(EntityErrorCodes.InvalidIdentifier, "Entity tag must be initialized.")
+        : WithEntity(id, state =>
         {
             state.Tags.Add(tag);
             return EntityResult.Success();
         });
 
-    public EntityResult RemoveTag(EntityId id, EntityTag tag) =>
-        WithEntity(id, state =>
+    public EntityResult RemoveTag(EntityId id, EntityTag tag) => string.IsNullOrWhiteSpace(tag.Value)
+        ? EntityResult.Failure(EntityErrorCodes.InvalidIdentifier, "Entity tag must be initialized.")
+        : WithEntity(id, state =>
         {
             state.Tags.Remove(tag);
             return EntityResult.Success();
         });
 
-    public EntityResult RegisterComponent(EntityId id, ComponentTypeId componentType) =>
-        WithEntity(id, state =>
+    public EntityResult RegisterComponent(EntityId id, ComponentTypeId componentType) => string.IsNullOrWhiteSpace(componentType.Value)
+        ? EntityResult.Failure(EntityErrorCodes.InvalidIdentifier, "Component type must be initialized.")
+        : WithEntity(id, state =>
         {
             state.ComponentTypes.Add(componentType);
             return EntityResult.Success();
         });
 
-    public EntityResult RemoveComponent(EntityId id, ComponentTypeId componentType) =>
-        WithEntity(id, state =>
+    public EntityResult RemoveComponent(EntityId id, ComponentTypeId componentType) => string.IsNullOrWhiteSpace(componentType.Value)
+        ? EntityResult.Failure(EntityErrorCodes.InvalidIdentifier, "Component type must be initialized.")
+        : WithEntity(id, state =>
         {
             state.ComponentTypes.Remove(componentType);
             return EntityResult.Success();

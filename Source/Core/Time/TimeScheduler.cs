@@ -34,8 +34,8 @@ public sealed record SchedulerDrainResult(IReadOnlyList<DueScheduledTask> DueTas
 
 public sealed class TimeScheduler
 {
-    private readonly PriorityQueue<ScheduledState, (long DueAt, long Sequence)> queue = new();
-    private readonly Dictionary<ScheduleId, ScheduledState> schedules = [];
+    private PriorityQueue<ScheduledState, (long DueAt, long Sequence)> queue = new();
+    private Dictionary<ScheduleId, ScheduledState> schedules = [];
     private long nextSequence;
 
     public int Count => schedules.Count;
@@ -56,6 +56,11 @@ public sealed class TimeScheduler
         if (dueAt.Value < currentTime.Value || string.IsNullOrWhiteSpace(category) || recurrence.HasValue && recurrence.Value.Value == 0)
         {
             return TimeOperationResult.Failure(TimeErrorCodes.InvalidSchedule, "Schedule must not be in the past and requires a category and positive recurrence.");
+        }
+
+        if (nextSequence == long.MaxValue)
+        {
+            return TimeOperationResult.Failure(TimeErrorCodes.Overflow, "Schedule creation sequence is exhausted.");
         }
 
         var copiedMetadata = new ReadOnlyDictionary<string, string>(
@@ -122,37 +127,52 @@ public sealed class TimeScheduler
         return new SchedulerDrainResult(due, limited);
     }
 
-    public IReadOnlyList<ScheduledTaskSnapshot> ExportSnapshots() => schedules.Values
+    public IReadOnlyList<ScheduledTaskSnapshot> ExportSnapshots() => Array.AsReadOnly(schedules.Values
         .OrderBy(state => state.DueAt.Value)
         .ThenBy(state => state.CreationSequence)
         .Select(state => new ScheduledTaskSnapshot(state.Id, state.DueAt, state.RecurrenceInterval, state.Category, state.Metadata, state.CreationSequence, state.Occurrence))
-        .ToArray();
+        .ToArray());
 
-    public TimeOperationResult Restore(IEnumerable<ScheduledTaskSnapshot> snapshots, WorldTimestamp currentTime)
+    public TimeOperationResult Restore(IEnumerable<ScheduledTaskSnapshot>? snapshots, WorldTimestamp currentTime)
     {
-        ArgumentNullException.ThrowIfNull(snapshots);
+        if (snapshots is null)
+        {
+            return TimeOperationResult.Failure(TimeErrorCodes.InvalidSnapshot, "Scheduler snapshot collection cannot be null.");
+        }
+
         var restored = snapshots.ToArray();
         if (restored.Any(item => item is null) ||
             restored.Select(item => item.Id).Distinct().Count() != restored.Length ||
             restored.Select(item => item.CreationSequence).Distinct().Count() != restored.Length ||
-            restored.Any(item => string.IsNullOrWhiteSpace(item.Id.Value) || item.Metadata is null || item.DueAt.Value < currentTime.Value ||
-                item.CreationSequence < 0 || item.NextOccurrence < 0 || string.IsNullOrWhiteSpace(item.Category) ||
+            restored.Any(item => string.IsNullOrWhiteSpace(item.Id.Value) || item.Metadata is null ||
+                item.Metadata.Any(pair => string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null) || item.DueAt.Value < currentTime.Value ||
+                item.CreationSequence < 0 || item.CreationSequence == long.MaxValue || item.NextOccurrence < 0 || string.IsNullOrWhiteSpace(item.Category) ||
                 item.RecurrenceInterval.HasValue && item.RecurrenceInterval.Value.Value == 0))
         {
             return TimeOperationResult.Failure(TimeErrorCodes.InvalidSnapshot, "Scheduler snapshot contains invalid or duplicate state.");
         }
 
-        queue.Clear();
-        schedules.Clear();
-        foreach (var snapshot in restored.OrderBy(item => item.CreationSequence))
+        var replacementQueue = new PriorityQueue<ScheduledState, (long DueAt, long Sequence)>();
+        var replacementSchedules = new Dictionary<ScheduleId, ScheduledState>();
+        try
         {
-            var metadata = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(snapshot.Metadata, StringComparer.Ordinal));
-            var state = new ScheduledState(snapshot.Id, snapshot.DueAt, snapshot.RecurrenceInterval, snapshot.Category.Trim(), metadata, snapshot.CreationSequence, snapshot.NextOccurrence);
-            schedules.Add(state.Id, state);
-            queue.Enqueue(state, (state.DueAt.Value, state.CreationSequence));
+            foreach (var snapshot in restored.OrderBy(item => item.CreationSequence))
+            {
+                var metadata = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(snapshot.Metadata, StringComparer.Ordinal));
+                var state = new ScheduledState(snapshot.Id, snapshot.DueAt, snapshot.RecurrenceInterval, snapshot.Category.Trim(), metadata, snapshot.CreationSequence, snapshot.NextOccurrence);
+                replacementSchedules.Add(state.Id, state);
+                replacementQueue.Enqueue(state, (state.DueAt.Value, state.CreationSequence));
+            }
+        }
+        catch (ArgumentException)
+        {
+            return TimeOperationResult.Failure(TimeErrorCodes.InvalidSnapshot, "Scheduler snapshot contains malformed metadata.");
         }
 
-        nextSequence = restored.Length == 0 ? 0 : checked(restored.Max(item => item.CreationSequence) + 1);
+        var replacementNextSequence = restored.Length == 0 ? 0 : restored.Max(item => item.CreationSequence) + 1;
+        queue = replacementQueue;
+        schedules = replacementSchedules;
+        nextSequence = replacementNextSequence;
         return TimeOperationResult.Success();
     }
 

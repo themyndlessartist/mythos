@@ -37,6 +37,7 @@ The M-001 prototype currently provides:
 - Active and inactive entities cannot carry retirement timestamps.
 - Hierarchy and ownership are modeled and validated independently.
 - Snapshot restoration validates lifecycle enum values, identifiers, collections, timestamps, and references before constructing registry state.
+- Tag and component mutation boundaries reject default or uninitialized identifiers so every successfully exported registry snapshot remains restorable.
 
 ## Known Limitations
 
@@ -51,6 +52,6 @@ The M-001 prototype currently provides:
 The repository build script verifies:
 
 - Release compilation with warnings treated as errors
-- xUnit Entity unit tests, including malformed snapshot and lifecycle/reference validation
+- xUnit Entity unit tests, including malformed snapshot, lifecycle/reference validation, mutation identifiers, and export-to-restore invariants
 - Framework smoke test
 - Godot project import and C# entry-scene execution

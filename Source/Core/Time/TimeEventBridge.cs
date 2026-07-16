@@ -31,9 +31,13 @@ public sealed class TimeEventBridge
         }
 
         var dueRegistered = eventBus.RegisterEventType<ScheduledTaskDueEvent>(ScheduledTaskDueType);
-        return dueRegistered.IsSuccess
-            ? TimeEventBridgeResult.Success(new TimeEventBridge(eventBus))
-            : TimeEventBridgeResult.Failure(dueRegistered.Error!);
+        if (dueRegistered.IsSuccess)
+        {
+            return TimeEventBridgeResult.Success(new TimeEventBridge(eventBus));
+        }
+
+        eventBus.UnregisterEventType(TimeAdvancedType);
+        return TimeEventBridgeResult.Failure(dueRegistered.Error!);
     }
 
     public IReadOnlyList<EventDispatchResult> Publish(TimeAdvanceResult advance)

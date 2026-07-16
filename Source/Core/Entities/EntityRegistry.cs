@@ -17,6 +17,13 @@ public sealed class EntityRegistry
 
     public EntityResult<EntitySnapshot> Create(EntityCategory category, long createdAt)
     {
+        if (string.IsNullOrWhiteSpace(category.Value))
+        {
+            return EntityResult<EntitySnapshot>.Failure(
+                EntityErrorCodes.InvalidSnapshot,
+                "Entity category must be initialized.");
+        }
+
         if (createdAt < 0)
         {
             return EntityResult<EntitySnapshot>.Failure(
@@ -255,6 +262,29 @@ public sealed class EntityRegistry
 
     private EntityResult ValidateSnapshotReferences(EntitySnapshot snapshot)
     {
+        if (!Enum.IsDefined(snapshot.LifecycleState))
+        {
+            return EntityResult.Failure(EntityErrorCodes.InvalidSnapshot, "Snapshot lifecycle state is undefined.");
+        }
+
+        if (string.IsNullOrWhiteSpace(snapshot.Category.Value))
+        {
+            return EntityResult.Failure(EntityErrorCodes.InvalidSnapshot, "Snapshot category must be initialized.");
+        }
+
+        if (snapshot.Tags is null || snapshot.ComponentTypes is null)
+        {
+            return EntityResult.Failure(EntityErrorCodes.InvalidSnapshot, "Snapshot collections cannot be null.");
+        }
+
+        if (snapshot.Tags.Any(tag => string.IsNullOrWhiteSpace(tag.Value)) ||
+            snapshot.ComponentTypes.Any(component => string.IsNullOrWhiteSpace(component.Value)))
+        {
+            return EntityResult.Failure(
+                EntityErrorCodes.InvalidSnapshot,
+                "Snapshot tags and component identifiers must be initialized.");
+        }
+
         if (snapshot.CreatedAt < 0 || snapshot.RetiredAt < snapshot.CreatedAt)
         {
             return EntityResult.Failure(EntityErrorCodes.InvalidTimestamp, "Snapshot timestamps are invalid.");
@@ -274,6 +304,11 @@ public sealed class EntityRegistry
 
         foreach (var reference in new[] { snapshot.ParentId, snapshot.OwnerId, snapshot.RegionId })
         {
+            if (reference is { Value: var value } && value == Guid.Empty)
+            {
+                return EntityResult.Failure(EntityErrorCodes.InvalidReference, "Snapshot references cannot use an empty ID.");
+            }
+
             if (reference is { } referencedId && referencedId == snapshot.Id)
             {
                 return EntityResult.Failure(EntityErrorCodes.SelfReference, "Entity snapshots cannot reference themselves.");
@@ -385,8 +420,8 @@ public sealed class EntityRegistry
                 RetiredAt = snapshot.RetiredAt,
             };
 
-            state.Tags.UnionWith(snapshot.Tags);
-            state.ComponentTypes.UnionWith(snapshot.ComponentTypes);
+            state.Tags.UnionWith(snapshot.Tags!);
+            state.ComponentTypes.UnionWith(snapshot.ComponentTypes!);
             return state;
         }
     }

@@ -12,18 +12,24 @@ public sealed class EntityRegistryEventReferenceValidator(EntityRegistry registr
 {
     private static readonly EntityCategory RegionCategory = new("Region");
 
-    public bool IsValidEntity(EntityId id) => registry.Exists(id);
+    public bool IsValidEntity(EntityId id)
+    {
+        var result = registry.Find(id);
+        return result.IsSuccess && result.Value!.LifecycleState is EntityLifecycleState.Active or EntityLifecycleState.Inactive;
+    }
 
     public bool IsValidRegion(EntityId id)
     {
         var result = registry.Find(id);
-        return result.IsSuccess && result.Value!.Category == RegionCategory;
+        return result.IsSuccess &&
+            result.Value!.Category == RegionCategory &&
+            result.Value.LifecycleState is EntityLifecycleState.Active or EntityLifecycleState.Inactive;
     }
 }
 
-public sealed class PermissiveEventReferenceValidator : IEventReferenceValidator
+public sealed class RejectingEventReferenceValidator : IEventReferenceValidator
 {
-    public bool IsValidEntity(EntityId id) => id.Value != Guid.Empty;
+    public bool IsValidEntity(EntityId id) => false;
 
-    public bool IsValidRegion(EntityId id) => id.Value != Guid.Empty;
+    public bool IsValidRegion(EntityId id) => false;
 }

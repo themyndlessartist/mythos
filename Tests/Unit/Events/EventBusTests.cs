@@ -66,7 +66,7 @@ public sealed class EventBusTests
         var source = EntityIdFrom(1);
         var target = EntityIdFrom(2);
         var region = EntityIdFrom(3);
-        var bus = RegisteredBus();
+        var bus = RegisteredBus(new AllowingEventReferenceValidator());
         var calls = 0;
         bus.Subscribe(
             TestEvent,
@@ -154,6 +154,125 @@ public sealed class EventBusTests
     }
 
     [Fact]
+    public void DefaultValidatorRejectsReferencedEvents()
+    {
+        var result = RegisteredBus().Publish(Request(new TestPayload(1), source: EntityIdFrom(1)));
+
+        Assert.Equal(EventDispatchStatus.Rejected, result.Status);
+        Assert.Equal(EventErrorCodes.InvalidReference, Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void EntityRegistryValidatorChecksEveryTargetAndRegionCategory()
+    {
+        var source = EntityIdFrom(1);
+        var target = EntityIdFrom(2);
+        var wrongRegion = EntityIdFrom(3);
+        var region = EntityIdFrom(4);
+        var registry = new EntityRegistry(new SequenceEntityIdGenerator(source, target, wrongRegion, region));
+        Assert.True(registry.Create(new EntityCategory("Character"), 0).IsSuccess);
+        Assert.True(registry.Create(new EntityCategory("Character"), 0).IsSuccess);
+        Assert.True(registry.Create(new EntityCategory("Character"), 0).IsSuccess);
+        Assert.True(registry.Create(new EntityCategory("Region"), 0).IsSuccess);
+        var bus = RegisteredBus(new EntityRegistryEventReferenceValidator(registry));
+
+        var missingTarget = bus.Publish(Request(new TestPayload(1), source, [target, EntityIdFrom(99)], region));
+        var wrongCategory = bus.Publish(Request(new TestPayload(2), source, [target], wrongRegion));
+        var valid = bus.Publish(Request(new TestPayload(3), source, [target], region));
+
+        Assert.Equal(EventDispatchStatus.Rejected, missingTarget.Status);
+        Assert.Equal(EventDispatchStatus.Rejected, wrongCategory.Status);
+        Assert.True(valid.IsSuccessful);
+    }
+
+    [Theory]
+    [InlineData(EntityLifecycleState.Retired)]
+    [InlineData(EntityLifecycleState.Destroyed)]
+    public void EntityRegistryValidatorRejectsTerminalReferences(EntityLifecycleState terminalState)
+    {
+        var id = EntityIdFrom(1);
+        var registry = new EntityRegistry(new FixedEntityIdGenerator(id));
+        Assert.True(registry.Create(new EntityCategory("Character"), 0).IsSuccess);
+        var transition = terminalState == EntityLifecycleState.Retired
+            ? registry.Retire(id, 1)
+            : registry.Destroy(id, 1);
+        Assert.True(transition.IsSuccess);
+        var bus = RegisteredBus(new EntityRegistryEventReferenceValidator(registry));
+
+        var result = bus.Publish(Request(new TestPayload(1), source: id));
+
+        Assert.Equal(EventDispatchStatus.Rejected, result.Status);
+        Assert.Equal(EventErrorCodes.InvalidReference, Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void EntityRegistryValidatorRejectsTerminalTargetAndRegionReferences()
+    {
+        var target = EntityIdFrom(1);
+        var region = EntityIdFrom(2);
+        var registry = new EntityRegistry(new SequenceEntityIdGenerator(target, region));
+        Assert.True(registry.Create(new EntityCategory("Character"), 0).IsSuccess);
+        Assert.True(registry.Create(new EntityCategory("Region"), 0).IsSuccess);
+        Assert.True(registry.Retire(target, 1).IsSuccess);
+        Assert.True(registry.Destroy(region, 1).IsSuccess);
+        var bus = RegisteredBus(new EntityRegistryEventReferenceValidator(registry));
+
+        var terminalTarget = bus.Publish(Request(new TestPayload(1), targets: [target]));
+        var terminalRegion = bus.Publish(Request(new TestPayload(2), region: region));
+
+        Assert.Equal(EventDispatchStatus.Rejected, terminalTarget.Status);
+        Assert.Equal(EventDispatchStatus.Rejected, terminalRegion.Status);
+    }
+
+    [Fact]
+    public void EmptyCorrelationOrCausationIdIsRejected()
+    {
+        var bus = RegisteredBus();
+        var empty = new EventId(Guid.Empty);
+
+        var correlation = bus.Publish(Request(new TestPayload(1), correlationId: empty));
+        var causation = bus.Publish(Request(new TestPayload(2), causationId: empty));
+
+        Assert.Equal(EventDispatchStatus.Rejected, correlation.Status);
+        Assert.Equal(EventDispatchStatus.Rejected, causation.Status);
+        Assert.All(correlation.Errors.Concat(causation.Errors), error => Assert.Equal(EventErrorCodes.InvalidReference, error.Code));
+    }
+
+    [Fact]
+    public void CorrelationAndCausationArePreserved()
+    {
+        var correlation = new EventId(Guid.CreateVersion7());
+        var causation = new EventId(Guid.CreateVersion7());
+
+        var result = RegisteredBus().Publish(Request(
+            new TestPayload(1),
+            correlationId: correlation,
+            causationId: causation));
+
+        Assert.True(result.IsSuccessful);
+        Assert.Equal(correlation, result.Event!.CorrelationId);
+        Assert.Equal(causation, result.Event.CausationId);
+    }
+
+    [Fact]
+    public void BatchIsolatesInvalidCorrelationFromValidRequest()
+    {
+        var values = new List<int>();
+        var bus = RegisteredBus();
+        bus.Subscribe(TestEvent, new SubscriberId("collector"), context => values.Add(((TestPayload)context.Event.Payload).Value));
+
+        var results = bus.PublishBatch([
+            Request(new TestPayload(1), correlationId: new EventId(Guid.Empty)),
+            Request(new TestPayload(2), correlationId: new EventId(Guid.CreateVersion7())),
+        ]);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(EventDispatchStatus.Rejected, results[0].Status);
+        Assert.True(results[1].IsSuccessful);
+        Assert.Equal([2], values);
+    }
+
+    [Fact]
     public void DiagnosticsAreBoundedAndCanBeDisabled()
     {
         var bus = RegisteredBus(diagnosticCapacity: 2);
@@ -222,7 +341,7 @@ public sealed class EventBusTests
         var target = EntityIdFrom(1);
         var targets = new List<EntityId> { target };
         var metadata = new Dictionary<string, string> { ["key"] = "original" };
-        var bus = RegisteredBus();
+        var bus = RegisteredBus(new AllowingEventReferenceValidator());
         EventEnvelope? captured = null;
         bus.Subscribe(TestEvent, new SubscriberId("capture"), context => captured = context.Event);
 
@@ -251,7 +370,9 @@ public sealed class EventBusTests
         EntityId? region = null,
         int priority = 0,
         bool cancelable = false,
-        EventId? requestedId = null) =>
+        EventId? requestedId = null,
+        EventId? correlationId = null,
+        EventId? causationId = null) =>
         new(
             TestEvent,
             10,
@@ -261,6 +382,8 @@ public sealed class EventBusTests
             region,
             priority,
             cancelable,
+            correlationId,
+            causationId,
             RequestedId: requestedId);
 
     private static EntityId EntityIdFrom(int value) => new(new Guid(value, 0, 0, new byte[8]));
@@ -270,5 +393,19 @@ public sealed class EventBusTests
     private sealed class FixedEntityIdGenerator(EntityId id) : IEntityIdGenerator
     {
         public EntityId Create() => id;
+    }
+
+    private sealed class SequenceEntityIdGenerator(params EntityId[] ids) : IEntityIdGenerator
+    {
+        private readonly Queue<EntityId> ids = new(ids);
+
+        public EntityId Create() => ids.Dequeue();
+    }
+
+    private sealed class AllowingEventReferenceValidator : IEventReferenceValidator
+    {
+        public bool IsValidEntity(EntityId id) => id.Value != Guid.Empty;
+
+        public bool IsValidRegion(EntityId id) => id.Value != Guid.Empty;
     }
 }

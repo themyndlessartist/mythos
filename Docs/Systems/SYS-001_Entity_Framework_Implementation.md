@@ -16,7 +16,7 @@ The M-001 prototype currently provides:
 - Extensible category, tag, and component-reference identifiers
 - Generic hierarchy and ownership assignments with cycle rejection
 - Validated region assignment to Region-category entities
-- Immutable public snapshots for persistence coordination
+- Immutable public snapshots with defensively copied, read-only collections for persistence coordination
 - Deterministically ordered snapshot export
 - Structured operation errors
 - Automated unit tests independent of Godot
@@ -24,7 +24,7 @@ The M-001 prototype currently provides:
 ## Boundaries
 
 - The Entity Framework does not reference Godot APIs.
-- Event publication awaits the SYS-002 implementation.
+- The Event Framework is available, but Entity event publication remains a separate, deferred integration task.
 - Region assignment validation currently uses Entity category metadata; richer Region Framework validation awaits SYS-004 implementation.
 - Save orchestration and multi-entity restore ordering await SYS-006 implementation.
 - Query indexes are intentionally deferred until prototype profiling demonstrates a need.
@@ -36,6 +36,7 @@ The M-001 prototype currently provides:
 - Retired and destroyed records remain registered and queryable.
 - Active and inactive entities cannot carry retirement timestamps.
 - Hierarchy and ownership are modeled and validated independently.
+- Snapshot restoration validates lifecycle enum values, identifiers, collections, timestamps, and references before constructing registry state.
 
 ## Known Limitations
 
@@ -43,12 +44,13 @@ The M-001 prototype currently provides:
 - Query operations currently scan registered entities and sort results for deterministic output.
 - Entity events, batch operations, debug export formats, and persistence migrations are not implemented.
 - Ownership cycles are rejected by default, as required by SYS-001.
+- xUnit 3.2.0 is explicitly approved as M-001 prototype test tooling and is not a framework runtime dependency.
 
 ## Verification
 
 The repository build script verifies:
 
 - Release compilation with warnings treated as errors
-- Entity unit tests
+- xUnit Entity unit tests, including malformed snapshot and lifecycle/reference validation
 - Framework smoke test
 - Godot project import and C# entry-scene execution

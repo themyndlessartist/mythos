@@ -33,7 +33,7 @@ The M-001 prototype currently provides:
 - Envelope immutability is shallow with respect to the domain-owned payload object.
 - Diagnostics are transient and are not World History.
 - Immediate events are not persisted.
-- Entity and Region references are validated through an injected boundary.
+- Referenced events require an injected validating boundary; the safe default rejects source, target, and Region references.
 
 ## Implementation Decisions
 
@@ -43,6 +43,8 @@ The M-001 prototype currently provides:
 - Handler exceptions are captured as structured errors and do not prevent later handlers from running.
 - A canceled event stops subsequent subscribers after the canceling handler completes.
 - Nested dispatch is limited to 32 active levels.
+- The Entity Registry validator rejects missing and terminal Entity references and requires Region references to identify non-terminal Region-category entities.
+- Empty correlation and causation IDs are rejected as malformed references.
 
 These decisions are contained within the Event Framework and may be replaced by later approved queued, threaded, or durable behavior.
 
@@ -53,6 +55,8 @@ These decisions are contained within the Event Framework and may be replaced by 
 - Durable queues, replay, networking, and World History promotion are not implemented.
 - Published Event IDs are retained for the runtime lifetime to prevent reuse.
 - The priority model has not been profiled under high event volume.
+- Entity lifecycle event publication remains deferred even though the Event Framework is now available.
+- xUnit 3.2.0 is explicitly approved as M-001 prototype test tooling and is not a framework runtime dependency.
 
 ## Verification
 
@@ -64,6 +68,8 @@ Automated tests cover:
 - Cancellation and illegal cancellation
 - Handler-failure isolation
 - Duplicate IDs and invalid references
+- Safe default reference rejection; source, all-target, Region-category, missing, and terminal reference validation
+- Correlation, causation, and mixed valid/invalid batch validation
 - Bounded diagnostics
 - Nested-dispatch protection
 - Subscription conflicts and removal

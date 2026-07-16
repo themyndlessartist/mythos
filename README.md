@@ -38,6 +38,9 @@ The approved foundation prototype uses:
 - Godot 4.7 .NET edition
 - C# targeting .NET 10
 - The .NET 10 SDK
+- xUnit 3.2.0 for prototype unit-test tooling
+
+xUnit is explicitly approved for M-001 test tooling. It is not a runtime dependency and does not select a permanent testing stack for later milestones.
 
 Godot integration is located in `Source/Integration/Godot`. Authoritative framework code belongs in `Source/Core` and must remain independent of Godot APIs whenever practical.
 
@@ -53,4 +56,4 @@ On Windows PowerShell, set `GODOT_BIN` when the Godot executable is not availabl
 ./Scripts/build.ps1
 ```
 
-The scripts build the solution, run the dependency-free smoke test, and validate the Godot project headlessly. Selection of a full automated test framework remains a pending foundation implementation decision.
+The scripts build the solution in Release mode, run the xUnit unit-test executable, run the dependency-free framework smoke test, import the Godot project headlessly, and execute the entry scene headlessly.

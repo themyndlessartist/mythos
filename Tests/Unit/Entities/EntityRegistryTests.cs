@@ -50,8 +50,8 @@ public sealed class EntityRegistryTests
         Assert.True(registry.RegisterComponent(id, characterData).IsSuccess);
 
         var snapshot = registry.Find(id).Value!;
-        Assert.Single(snapshot.Tags);
-        Assert.Single(snapshot.ComponentTypes);
+        Assert.Single(snapshot.Tags!);
+        Assert.Single(snapshot.ComponentTypes!);
         Assert.Equal(id, Assert.Single(registry.QueryByTag(named)).Id);
     }
 
@@ -129,11 +129,7 @@ public sealed class EntityRegistryTests
         var childId = Id(2);
         var registry = new EntityRegistry();
         Assert.True(registry.Register(Snapshot(parentId)).IsSuccess);
-        var child = Snapshot(childId) with
-        {
-            ParentId = parentId,
-            Tags = [new EntityTag("Persistent")],
-        };
+        var child = Snapshot(childId, tags: [new EntityTag("Persistent")], parentId: parentId);
 
         var restored = registry.Register(child);
 
@@ -146,7 +142,7 @@ public sealed class EntityRegistryTests
     [Fact]
     public void RegisterRejectsMissingReference()
     {
-        var child = Snapshot(Id(1)) with { ParentId = Id(2) };
+        var child = Snapshot(Id(1), parentId: Id(2));
 
         var result = new EntityRegistry().Register(child);
 
@@ -157,9 +153,31 @@ public sealed class EntityRegistryTests
     [Fact]
     public void RegisterRejectsRetirementTimestampOnActiveEntity()
     {
-        var invalid = Snapshot(Id(1)) with { RetiredAt = 10 };
+        var invalid = Snapshot(Id(1), retiredAt: 10);
 
         var result = new EntityRegistry().Register(invalid);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(EntityErrorCodes.InvalidTimestamp, result.Error!.Code);
+    }
+
+    [Fact]
+    public void RegisterRejectsNegativeCreationTimestamp()
+    {
+        var result = new EntityRegistry().Register(Snapshot(Id(1), createdAt: -1));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(EntityErrorCodes.InvalidTimestamp, result.Error!.Code);
+    }
+
+    [Fact]
+    public void RegisterRejectsRetirementBeforeCreation()
+    {
+        var result = new EntityRegistry().Register(Snapshot(
+            Id(1),
+            lifecycle: EntityLifecycleState.Retired,
+            createdAt: 10,
+            retiredAt: 9));
 
         Assert.False(result.IsSuccess);
         Assert.Equal(EntityErrorCodes.InvalidTimestamp, result.Error!.Code);
@@ -178,6 +196,76 @@ public sealed class EntityRegistryTests
         Assert.Equal([Id(1), Id(2), Id(3)], ids);
     }
 
+    [Theory]
+    [InlineData(EntityLifecycleState.Retired)]
+    [InlineData(EntityLifecycleState.Destroyed)]
+    public void RegisterRejectsTerminalSnapshotWithoutRetirementTimestamp(EntityLifecycleState lifecycle)
+    {
+        var result = new EntityRegistry().Register(Snapshot(Id(1), lifecycle: lifecycle));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(EntityErrorCodes.InvalidTimestamp, result.Error!.Code);
+    }
+
+    [Fact]
+    public void RegisterRejectsUndefinedLifecycle()
+    {
+        var result = new EntityRegistry().Register(Snapshot(Id(1), lifecycle: (EntityLifecycleState)99));
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(EntityErrorCodes.InvalidSnapshot, result.Error!.Code);
+    }
+
+    [Fact]
+    public void RegisterRejectsUninitializedIdentifiers()
+    {
+        var registry = new EntityRegistry();
+
+        var category = registry.Register(new EntitySnapshot(Id(1), default, EntityLifecycleState.Active, [], null, null, null, [], 0, null));
+        var tag = registry.Register(new EntitySnapshot(Id(2), Character, EntityLifecycleState.Active, [default], null, null, null, [], 0, null));
+        var component = registry.Register(new EntitySnapshot(Id(3), Character, EntityLifecycleState.Active, [], null, null, null, [default], 0, null));
+
+        Assert.Equal(EntityErrorCodes.InvalidSnapshot, category.Error!.Code);
+        Assert.Equal(EntityErrorCodes.InvalidSnapshot, tag.Error!.Code);
+        Assert.Equal(EntityErrorCodes.InvalidSnapshot, component.Error!.Code);
+        Assert.Equal(0, registry.Count);
+    }
+
+    [Fact]
+    public void RegisterRejectsNullCollectionsWithoutThrowing()
+    {
+        var registry = new EntityRegistry();
+
+        var tags = registry.Register(new EntitySnapshot(Id(1), Character, EntityLifecycleState.Active, null, null, null, null, [], 0, null));
+        var components = registry.Register(new EntitySnapshot(Id(2), Character, EntityLifecycleState.Active, [], null, null, null, null, 0, null));
+
+        Assert.Equal(EntityErrorCodes.InvalidSnapshot, tags.Error!.Code);
+        Assert.Equal(EntityErrorCodes.InvalidSnapshot, components.Error!.Code);
+    }
+
+    [Fact]
+    public void RegisterRejectsEmptyReference()
+    {
+        var emptyParent = new EntityRegistry().Register(Snapshot(Id(1), parentId: default(EntityId)));
+
+        Assert.Equal(EntityErrorCodes.InvalidReference, emptyParent.Error!.Code);
+    }
+
+    [Fact]
+    public void SnapshotCollectionsCannotBeMutatedThroughPublicProjection()
+    {
+        var tags = new[] { new EntityTag("Persistent") };
+        var components = new[] { new ComponentTypeId("CharacterData") };
+        var snapshot = Snapshot(Id(1), tags: tags, componentTypes: components);
+
+        tags[0] = new EntityTag("Changed");
+        components[0] = new ComponentTypeId("ChangedData");
+
+        Assert.Equal("Persistent", Assert.Single(snapshot.Tags!).Value);
+        Assert.Equal("CharacterData", Assert.Single(snapshot.ComponentTypes!).Value);
+        Assert.Throws<NotSupportedException>(() => ((IList<EntityTag>)snapshot.Tags!)[0] = new EntityTag("Blocked"));
+    }
+
     private static EntityRegistry RegistryWith(params EntityId[] ids)
     {
         var registry = new EntityRegistry(new SequenceIdGenerator(ids));
@@ -189,17 +277,27 @@ public sealed class EntityRegistryTests
         return registry;
     }
 
-    private static EntitySnapshot Snapshot(EntityId id) => new(
+    private static EntitySnapshot Snapshot(
+        EntityId id,
+        EntityCategory? category = null,
+        EntityLifecycleState lifecycle = EntityLifecycleState.Active,
+        IReadOnlyList<EntityTag>? tags = default,
+        EntityId? parentId = null,
+        EntityId? ownerId = null,
+        EntityId? regionId = null,
+        IReadOnlyList<ComponentTypeId>? componentTypes = default,
+        long createdAt = 0,
+        long? retiredAt = null) => new(
         id,
-        Character,
-        EntityLifecycleState.Active,
-        [],
-        null,
-        null,
-        null,
-        [],
-        0,
-        null);
+        category ?? Character,
+        lifecycle,
+        tags ?? [],
+        parentId,
+        ownerId,
+        regionId,
+        componentTypes ?? [],
+        createdAt,
+        retiredAt);
 
     private static EntityId Id(int value) => new(new Guid(value, 0, 0, new byte[8]));
 

@@ -11,6 +11,7 @@ public static class EntityErrorCodes
     public const string OwnershipCycle = "entity.ownership_cycle";
     public const string InvalidLifecycleTransition = "entity.invalid_lifecycle_transition";
     public const string InvalidTimestamp = "entity.invalid_timestamp";
+    public const string InvalidSnapshot = "entity.invalid_snapshot";
 }
 
 public sealed record EntityError(string Code, string Message);

@@ -31,7 +31,7 @@ public sealed class EventBus
             throw new ArgumentOutOfRangeException(nameof(diagnosticCapacity));
         }
 
-        this.referenceValidator = referenceValidator ?? new PermissiveEventReferenceValidator();
+        this.referenceValidator = referenceValidator ?? new RejectingEventReferenceValidator();
         this.idGenerator = idGenerator ?? new Version7EventIdGenerator();
         this.diagnosticCapacity = diagnosticCapacity;
     }
@@ -154,6 +154,14 @@ public sealed class EventBus
             return PreparedEvent.Failure(
                 EventErrorCodes.InvalidPayload,
                 $"Event '{request.Type}' requires payload type '{registration.PayloadType.FullName}'.");
+        }
+
+        if (request.CorrelationId is { Value: var correlationValue } && correlationValue == Guid.Empty ||
+            request.CausationId is { Value: var causationValue } && causationValue == Guid.Empty)
+        {
+            return PreparedEvent.Failure(
+                EventErrorCodes.InvalidReference,
+                "Correlation and causation IDs cannot be empty.");
         }
 
         var id = request.RequestedId ?? idGenerator.Create();

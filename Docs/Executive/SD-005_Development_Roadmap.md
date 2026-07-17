@@ -89,7 +89,21 @@ Status: Planned
 
 --------------------------------------------
 
-# 8. Phase 6 — First Mythos Title Pre-Production
+# 8. Parallel Tooling Track — Content Studio
+
+Status: Specification Drafted; Implementation Not Started
+
+This track proceeds alongside M-001 without changing its scope, priority, or exit conditions.
+
+- [TOOL-001 Mythos Content Studio MVP](../Tools/TOOL-001_Mythos_Content_Studio_MVP.md)
+- DATA-001 through DATA-004 authoring/export contracts
+- Local-first authoring and validation
+- Engine-neutral content-package export for a later Godot importer
+- No web-application implementation until the draft specifications are approved
+
+--------------------------------------------
+
+# 9. Phase 6 — First Mythos Title Pre-Production
 
 Status: Planned
 

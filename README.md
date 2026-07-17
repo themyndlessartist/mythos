@@ -19,6 +19,7 @@ The shared framework should remain setting-agnostic whenever practical. Framewor
 - `Docs/Audio/`: audio direction, implementation notes, and pipeline documentation.
 - `Docs/QA/`: test plans, quality standards, bug triage processes, and release criteria.
 - `Docs/Tools/`: documentation for developer tools, pipelines, and editor workflows.
+- `Docs/Data/`: versioned authoring and interchange data-contract specifications; runtime and save contracts remain owned by their framework documents.
 - `Docs/Templates/`: reusable documentation templates.
 - `Source/`: active source code for the core framework, systems, modules, integration, and debug support.
 - `Data/`: future schemas, definitions, settings, and test data.

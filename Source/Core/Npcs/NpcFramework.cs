@@ -29,7 +29,7 @@ public sealed class NpcFramework
         if (profile is null) return NpcResult<NpcProfileSnapshot>.Failure(NpcErrorCodes.InvalidSnapshot, "NPC profile cannot be null.");
         if (profiles.ContainsKey(profile.CharacterEntityId))
             return NpcResult<NpcProfileSnapshot>.Failure(NpcErrorCodes.DuplicateProfile, "An NPC profile already exists for the Character entity.");
-        var validation = ValidateProfile(profile);
+        var validation = ValidateOperationalProfile(profile);
         if (!validation.IsSuccess) return NpcResult<NpcProfileSnapshot>.Failure(validation.Error!.Code, validation.Error.Message);
         profiles.Add(profile.CharacterEntityId, profile);
         return NpcResult<NpcProfileSnapshot>.Success(profile);
@@ -45,7 +45,7 @@ public sealed class NpcFramework
             return NpcResult<NpcUpdateResult>.Failure(NpcErrorCodes.InvalidState, "Maximum transitions must be positive.");
         if (!profiles.TryGetValue(characterEntityId, out var profile))
             return NpcResult<NpcUpdateResult>.Failure(NpcErrorCodes.ProfileNotFound, "NPC profile was not found.");
-        var validation = ValidateProfile(profile);
+        var validation = ValidateOperationalProfile(profile);
         if (!validation.IsSuccess) return NpcResult<NpcUpdateResult>.Failure(validation.Error!.Code, validation.Error.Message);
 
         var schedule = references.FindSchedule(profile.ScheduleId)!;
@@ -78,19 +78,17 @@ public sealed class NpcFramework
     {
         if (!Enum.IsDefined(tier)) return NpcResult.Failure(NpcErrorCodes.InvalidState, "NPC simulation tier is invalid.");
         if (!profiles.TryGetValue(characterEntityId, out var profile)) return NpcResult.Failure(NpcErrorCodes.ProfileNotFound, "NPC profile was not found.");
+        var validation = ValidateOperationalProfile(profile);
+        if (!validation.IsSuccess) return validation;
         profiles[characterEntityId] = profile with { SimulationTier = tier };
         return NpcResult.Success();
     }
 
     public NpcResult ValidateReferences()
     {
-        var characterResult = characters.ValidateReferences();
-        if (!characterResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, characterResult.Error!.Message);
-        var regionResult = regions.ValidateReferences();
-        if (!regionResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, regionResult.Error!.Message);
         foreach (var profile in profiles.Values.OrderBy(item => item.CharacterEntityId.Value))
         {
-            var result = ValidateProfile(profile);
+            var result = ValidateOperationalProfile(profile);
             if (!result.IsSuccess) return result;
         }
         return NpcResult.Success();
@@ -99,7 +97,7 @@ public sealed class NpcFramework
     public NpcResult<NpcDiagnostic> Inspect(EntityId characterEntityId)
     {
         if (!profiles.TryGetValue(characterEntityId, out var profile)) return NpcResult<NpcDiagnostic>.Failure(NpcErrorCodes.ProfileNotFound, "NPC profile was not found.");
-        var validation = ValidateProfile(profile);
+        var validation = ValidateOperationalProfile(profile);
         return NpcResult<NpcDiagnostic>.Success(new NpcDiagnostic(profile.CharacterEntityId, profile.PurposeId, profile.ScheduleId,
             profile.CurrentScheduleStateId, profile.NextDueAt, profile.SimulationTier, profile.CompletedTransitions,
             validation.IsSuccess ? "valid" : $"{validation.Error!.Code}: {validation.Error.Message}"));
@@ -143,11 +141,21 @@ public sealed class NpcFramework
         if (!references.IsKnownPurpose(profile.PurposeId))
             return NpcResult.Failure(NpcErrorCodes.InvalidReference, "NPC purpose reference was not found.");
         var schedule = references.FindSchedule(profile.ScheduleId);
-        if (!ValidSchedule(schedule)) return NpcResult.Failure(NpcErrorCodes.InvalidSchedule, "NPC schedule definition is missing or malformed.");
+        if (!ValidSchedule(schedule) || schedule!.Id != profile.ScheduleId)
+            return NpcResult.Failure(NpcErrorCodes.InvalidSchedule, "NPC schedule definition is missing, mismatched, or malformed.");
         if (profile.CurrentScheduleEntryIndex < 0 || profile.CurrentScheduleEntryIndex >= schedule!.Entries!.Count ||
             schedule.Entries[profile.CurrentScheduleEntryIndex].StateId != profile.CurrentScheduleStateId)
             return NpcResult.Failure(NpcErrorCodes.InvalidState, "NPC schedule execution state does not match its definition.");
         return NpcResult.Success();
+    }
+
+    private NpcResult ValidateOperationalProfile(NpcProfileSnapshot profile)
+    {
+        var characterResult = characters.ValidateReferences();
+        if (!characterResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, characterResult.Error!.Message);
+        var regionResult = regions.ValidateReferences();
+        if (!regionResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, regionResult.Error!.Message);
+        return ValidateProfile(profile);
     }
 
     private static bool ValidSchedule(NpcScheduleDefinition? schedule) => schedule is not null && Initialized(schedule.Id.Value) &&

@@ -103,6 +103,69 @@ public sealed class NpcFrameworkTests
         Assert.Equal(NpcErrorCodes.InvalidReference, characterDrift.Npcs.ValidateReferences().Error?.Code);
     }
 
+    [Theory]
+    [InlineData(EntityLifecycleState.Retired)]
+    [InlineData(EntityLifecycleState.Destroyed)]
+    public void UpdateRejectsTerminalAssignedRegionAtomically(EntityLifecycleState terminalState)
+    {
+        var fixture = Fixture.Create();
+        Assert.True(fixture.Npcs.Register(fixture.Profile()).IsSuccess);
+        var before = fixture.Npcs.Find(fixture.CharacterId).Value!;
+        Assert.True(fixture.Entities.ChangeLifecycle(fixture.AssignedRegionId, terminalState, 1).IsSuccess);
+
+        var result = fixture.Npcs.Update(fixture.CharacterId, new WorldTimestamp(25), 10);
+
+        Assert.Equal(NpcErrorCodes.InvalidReference, result.Error?.Code);
+        Assert.Equal(before, fixture.Npcs.Find(fixture.CharacterId).Value);
+    }
+
+    [Fact]
+    public void UpdateRejectsInvalidatedCharacterDefinitionsAtomically()
+    {
+        var fixture = Fixture.Create();
+        Assert.True(fixture.Npcs.Register(fixture.Profile()).IsSuccess);
+        var before = fixture.Npcs.Find(fixture.CharacterId).Value!;
+        fixture.InvalidateCharacterDefinitions();
+
+        var result = fixture.Npcs.Update(fixture.CharacterId, new WorldTimestamp(25), 10);
+
+        Assert.Equal(NpcErrorCodes.InvalidReference, result.Error?.Code);
+        Assert.Equal(before, fixture.Npcs.Find(fixture.CharacterId).Value);
+    }
+
+    [Fact]
+    public void PurposeScheduleAndReturnedScheduleIdentityDriftSuspendUpdates()
+    {
+        var purpose = Fixture.Create();
+        Assert.True(purpose.Npcs.Register(purpose.Profile()).IsSuccess);
+        purpose.InvalidatePurpose();
+        Assert.Equal(NpcErrorCodes.InvalidReference, purpose.Npcs.Update(purpose.CharacterId, new WorldTimestamp(25), 10).Error?.Code);
+
+        var schedule = Fixture.Create();
+        Assert.True(schedule.Npcs.Register(schedule.Profile()).IsSuccess);
+        schedule.RemoveSchedule();
+        Assert.Equal(NpcErrorCodes.InvalidSchedule, schedule.Npcs.Update(schedule.CharacterId, new WorldTimestamp(25), 10).Error?.Code);
+
+        var mismatch = Fixture.Create();
+        Assert.True(mismatch.Npcs.Register(mismatch.Profile()).IsSuccess);
+        mismatch.ReturnMismatchedScheduleId();
+        Assert.Equal(NpcErrorCodes.InvalidSchedule, mismatch.Npcs.Update(mismatch.CharacterId, new WorldTimestamp(25), 10).Error?.Code);
+        Assert.Equal(0, mismatch.Npcs.Find(mismatch.CharacterId).Value!.CompletedTransitions);
+    }
+
+    [Fact]
+    public void TierMutationValidatesDriftAndRemainsAtomic()
+    {
+        var fixture = Fixture.Create();
+        Assert.True(fixture.Npcs.Register(fixture.Profile()).IsSuccess);
+        fixture.InvalidateCharacterDefinitions();
+
+        var result = fixture.Npcs.SetSimulationTier(fixture.CharacterId, NpcSimulationTier.Abstract);
+
+        Assert.Equal(NpcErrorCodes.InvalidReference, result.Error?.Code);
+        Assert.Equal(NpcSimulationTier.Active, fixture.Npcs.Find(fixture.CharacterId).Value!.SimulationTier);
+    }
+
     [Fact]
     public void SnapshotIsDefensiveVersionedAndRoundTrips()
     {
@@ -149,15 +212,34 @@ public sealed class NpcFrameworkTests
         Assert.StartsWith(NpcErrorCodes.InvalidReference, fixture.Npcs.Inspect(fixture.CharacterId).Value!.ReferenceStatus);
     }
 
+    [Fact]
+    public void DiagnosticsUseCharacterAndRegionValidationBoundariesAfterDrift()
+    {
+        var character = Fixture.Create();
+        Assert.True(character.Npcs.Register(character.Profile()).IsSuccess);
+        character.InvalidateCharacterDefinitions();
+        Assert.StartsWith(NpcErrorCodes.InvalidReference, character.Npcs.Inspect(character.CharacterId).Value!.ReferenceStatus);
+
+        var region = Fixture.Create();
+        Assert.True(region.Npcs.Register(region.Profile()).IsSuccess);
+        Assert.True(region.Entities.Destroy(region.AssignedRegionId, 1).IsSuccess);
+        Assert.StartsWith(NpcErrorCodes.InvalidReference, region.Npcs.Inspect(region.CharacterId).Value!.ReferenceStatus);
+    }
+
     private sealed class Fixture
     {
         private static readonly CharacterStatusId Status = new("available");
         private static readonly LifeStageId Stage = new("established");
-        private readonly References references = new();
+        private readonly References references;
+        private readonly CharacterReferences characterReferences;
 
-        private Fixture(EntityRegistry entities, RegionFramework regions, CharacterRegistry characters, EntityId characterId)
+        private Fixture(EntityRegistry entities, RegionFramework regions, CharacterRegistry characters, EntityId characterId,
+            EntityId assignedRegionId, References references, CharacterReferences characterReferences)
         {
             Entities = entities; Regions = regions; Characters = characters; CharacterId = characterId;
+            AssignedRegionId = assignedRegionId;
+            this.references = references;
+            this.characterReferences = characterReferences;
             Npcs = NewNpcFramework();
         }
 
@@ -165,6 +247,7 @@ public sealed class NpcFrameworkTests
         public RegionFramework Regions { get; }
         public CharacterRegistry Characters { get; }
         public EntityId CharacterId { get; }
+        public EntityId AssignedRegionId { get; }
         public NpcFramework Npcs { get; }
 
         public static Fixture Create(bool assignRegion = true)
@@ -175,9 +258,10 @@ public sealed class NpcFrameworkTests
             var area = regions.CreateRegion(new RegionCategory("neutral-area"), root.Id, 0).Value!;
             var characterId = entities.Create(new EntityCategory("Character"), 0).Value!.Id;
             if (assignRegion) Assert.True(regions.AssignEntity(characterId, area.Id).IsSuccess);
-            var characters = new CharacterRegistry(entities, new CharacterReferences());
+            var characterReferences = new CharacterReferences();
+            var characters = new CharacterRegistry(entities, characterReferences);
             Assert.True(characters.Register(new CharacterProfileSnapshot(characterId, new CharacterIdentity("fixture"), Status, Stage)).IsSuccess);
-            return new Fixture(entities, regions, characters, characterId);
+            return new Fixture(entities, regions, characters, characterId, area.Id, new References(), characterReferences);
         }
 
         public NpcProfileSnapshot Profile(NpcSimulationTier tier = NpcSimulationTier.Active) => new(
@@ -186,10 +270,16 @@ public sealed class NpcFrameworkTests
 
         public NpcFramework NewNpcFramework() => new(Entities, Characters, Regions, references);
 
+        public void InvalidateCharacterDefinitions() => characterReferences.AreDefinitionsValid = false;
+        public void InvalidatePurpose() => references.IsPurposeAvailable = false;
+        public void RemoveSchedule() => references.IsScheduleAvailable = false;
+        public void ReturnMismatchedScheduleId() => references.UseMismatchedScheduleId = true;
+
         private sealed class CharacterReferences : ICharacterReferenceValidator
         {
-            public bool IsKnownStatus(CharacterStatusId statusId) => statusId == Status;
-            public bool IsKnownLifeStage(LifeStageId lifeStageId) => lifeStageId == Stage;
+            public bool AreDefinitionsValid { get; set; } = true;
+            public bool IsKnownStatus(CharacterStatusId statusId) => AreDefinitionsValid && statusId == Status;
+            public bool IsKnownLifeStage(LifeStageId lifeStageId) => AreDefinitionsValid && lifeStageId == Stage;
         }
 
         private sealed class References : INpcReferenceProvider
@@ -198,8 +288,17 @@ public sealed class NpcFrameworkTests
             public NpcScheduleDefinition Schedule { get; } = new(new NpcScheduleId("neutral-cycle"),
                 [new NpcScheduleEntry(new NpcScheduleStateId("state-a"), new WorldDuration(10)),
                  new NpcScheduleEntry(new NpcScheduleStateId("state-b"), new WorldDuration(10))]);
-            public bool IsKnownPurpose(NpcPurposeId purposeId) => purposeId == Purpose;
-            public NpcScheduleDefinition? FindSchedule(NpcScheduleId scheduleId) => scheduleId == Schedule.Id ? Schedule : null;
+            public bool IsPurposeAvailable { get; set; } = true;
+            public bool IsScheduleAvailable { get; set; } = true;
+            public bool UseMismatchedScheduleId { get; set; }
+            public bool IsKnownPurpose(NpcPurposeId purposeId) => IsPurposeAvailable && purposeId == Purpose;
+            public NpcScheduleDefinition? FindSchedule(NpcScheduleId scheduleId)
+            {
+                if (!IsScheduleAvailable || scheduleId != Schedule.Id) return null;
+                return UseMismatchedScheduleId
+                    ? new NpcScheduleDefinition(new NpcScheduleId("different-cycle"), Schedule.Entries)
+                    : Schedule;
+            }
         }
     }
 }

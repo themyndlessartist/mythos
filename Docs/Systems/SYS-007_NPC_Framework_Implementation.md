@@ -17,7 +17,7 @@ The M-001 fixture provides one engine-independent NPC profile composed one-to-on
 
 The framework accepts an authoritative `WorldTimestamp` from callers and deterministically advances a minimal cyclic, data-defined schedule. Active and abstract tiers use the same authoritative state transition contract. Catch-up is caller-bounded, reports remaining overdue work, and can be resumed without replaying completed transitions.
 
-Registration, update, restore, and explicit boundary validation verify Entity identity/lifecycle, Character linkage, Region assignment through Region Framework records, purpose and schedule definitions, schedule execution state, and cross-domain drift. Versioned snapshots defensively copy profile collections; restore builds and validates a complete candidate before atomically replacing live NPC state. Inspection exposes fixture state and structured reference status.
+Registration, update, restore, and explicit boundary validation verify Entity identity/lifecycle, Character linkage, Region assignment through Region Framework records, purpose and schedule definitions, schedule execution state, and cross-domain drift. Update and simulation-tier mutation first invoke the Character and Region public reference-validation boundaries, then validate the relevant NPC profile; failures suspend the operation without changing NPC state. Schedule providers must return a definition whose ID exactly matches the requested profile reference. Versioned snapshots defensively copy profile collections; restore builds and validates a complete candidate before atomically replacing live NPC state. Inspection uses the same complete validation path and exposes fixture state with structured reference status.
 
 ## Prototype-Local Decisions
 
@@ -29,13 +29,13 @@ These choices are reversible M-001 mechanisms under ADR-024 and do not resolve S
 - Purpose and schedule definitions remain externally owned behind `INpcReferenceProvider`; the NPC Framework stores and validates references only.
 - NPC catch-up is pull-based and bounded per call. The framework does not register Time tasks or own/advance the authoritative clock.
 - Snapshot version 1 is a milestone-local coordination contract, not a final serialization format.
-- Callers invoke `ValidateReferences` at persistence and simulation boundaries until approved cross-domain lifecycle events and Save orchestration exist.
+- Update, tier mutation, inspection, and explicit `ValidateReferences` synchronously revalidate Character and Region public boundaries because approved cross-domain lifecycle events and Save orchestration do not yet exist.
 
 ## Boundaries and Failure Behavior
 
 The slice implements no navigation, pathfinding, needs, emotions, goals, ambitions, planning AI, intentions, combat, economy, dialogue, relationships, professions, actions, or title-specific content. It publishes no speculative NPC events and does not mutate Character, Entity, Region, or Time state.
 
-Failures return stable `npc.*` codes. Malformed identifiers, definitions, snapshots, enum values, counts, missing references, invalid lifecycle state, duplicate Character links, cross-domain drift, and timestamp/count overflow are rejected. Failed registration, update overflow, and restore do not partially mutate authoritative NPC state.
+Failures return stable `npc.*` codes. Malformed identifiers, definitions, snapshots, enum values, counts, missing or mismatched references, invalid lifecycle state, duplicate Character links, cross-domain drift, and timestamp/count overflow are rejected. Failed registration, update, tier mutation, and restore do not partially mutate authoritative NPC state.
 
 ## Known Limitations and Risks
 
@@ -47,4 +47,4 @@ Failures return stable `npc.*` codes. Malformed identifiers, definitions, snapsh
 
 ## Verification
 
-Automated coverage includes active and abstract updates, bounded deterministic catch-up, clock non-ownership, one-to-one registration, Entity/Character/Region drift, missing and malformed references, lifecycle and enum validation, defensive/versioned snapshots, malformed and duplicate snapshot rejection, atomic failed restore, round trip, diagnostics, smoke integration, Release compilation, and both Godot headless checks.
+Automated coverage includes active and abstract updates, bounded deterministic catch-up, clock non-ownership, one-to-one registration, retired/destroyed Region drift, invalidated Character definitions, purpose and schedule-definition drift, mismatched schedule-provider IDs, atomic failed updates and tier mutations, drift-aware diagnostics, missing and malformed references, lifecycle and enum validation, defensive/versioned snapshots, malformed and duplicate snapshot rejection, atomic failed restore, round trip, smoke integration, Release compilation, and both Godot headless checks.

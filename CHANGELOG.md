@@ -6,6 +6,8 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Content Studio MVP vertical slice under `Tools/ContentStudio`: local-first React/TypeScript/Vite authoring workspaces for NPC records, character assets, layered maps, and deterministic package readiness/export.
+- DATA-001 through DATA-004 TypeScript models, structured validators, path/media security checks, canonical export helpers, replaceable draft persistence, undo/redo history, and contract tests.
 - Draft TOOL-001 Mythos Content Studio MVP specification and DATA-001 through DATA-004 engine-neutral authoring/export contracts.
 - Data-contract and tool-specification document indexes plus a parallel Content Studio roadmap track that does not displace M-001.
 - Godot 4.7 .NET and C# foundation prototype scaffolding.

@@ -8,7 +8,7 @@
 - Status: In Progress
 - Owner: Mythos Executive Development
 - Last Updated: July 2026
-- Applies Through Commit: `Pending M-001 Region implementation commit`
+- Applies Through Commit: `feadbf8`
 - Approval/Decision References: [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)
 
 ## Implemented Scope
@@ -46,6 +46,7 @@ The following decisions are reversible, prototype-local M-001 choices. They do n
 - Snapshots are milestone-local coordination records, not a final save schema. Restore expects referenced Entity records to have already been restored through the Entity Framework.
 - Restore prepares and validates all Region state before changing live state. Entity assignments are reapplied as a single validated phase with defensive rollback.
 - Event publication and Time scheduling are not required by this isolated state-management slice, so no speculative event payloads or schedules were introduced.
+- Callers must invoke `ValidateReferences` at persistence and simulation boundaries until approved Entity lifecycle-event integration exists.
 
 ## Validation and Failure Behavior
 

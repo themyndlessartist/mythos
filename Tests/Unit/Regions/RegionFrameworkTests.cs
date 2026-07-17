@@ -97,7 +97,7 @@ public sealed class RegionFrameworkTests
         Assert.True(fixture.Regions.SetSimulationState(fixture.ChildId, RegionSimulationState.Active).IsSuccess);
         Assert.True(fixture.Regions.SetSimulationState(fixture.ChildId, RegionSimulationState.Abstract).IsSuccess);
         Assert.True(fixture.Regions.SetSimulationOwner(fixture.ChildId, fixture.RootId).IsSuccess);
-        Assert.Equal(fixture.RootId, fixture.Regions.ResolveSimulationOwner(fixture.ChildId));
+        Assert.Equal(fixture.RootId, fixture.Regions.ResolveSimulationOwner(fixture.ChildId).Value);
 
         var sibling = fixture.Regions.CreateRegion(NeutralArea, fixture.RootId, 5).Value!;
         Assert.Equal(RegionErrorCodes.InvalidState, fixture.Regions.SetSimulationOwner(fixture.ChildId, sibling.Id).Error!.Code);
@@ -134,9 +134,33 @@ public sealed class RegionFrameworkTests
 
         Assert.Equal([Id(20), Id(40)], regions.QueryChildren(root.Id).Select(r => r.Id));
         Assert.Equal([Id(20), Id(40)], regions.QueryDescendants(root.Id).Select(r => r.Id));
-        var diagnostic = regions.Inspect(low.Id);
+        var diagnostic = regions.Inspect(low.Id).Value!;
         Assert.Equal([high.Id], diagnostic.AdjacentRegionIds);
         Assert.Equal([character.Id], diagnostic.AssignedEntityIds);
+    }
+
+    [Fact]
+    public void InspectionReturnsStructuredFailuresForMissingAndTerminalRegions()
+    {
+        var fixture = CreateFixture();
+
+        Assert.Equal(RegionErrorCodes.InvalidReference, fixture.Regions.ResolveSimulationOwner(Id(99)).Error?.Code);
+        Assert.Equal(RegionErrorCodes.InvalidReference, fixture.Regions.Inspect(Id(99)).Error?.Code);
+        Assert.True(fixture.Entities.Retire(fixture.ChildId, 10).IsSuccess);
+        Assert.Equal(RegionErrorCodes.InvalidReference, fixture.Regions.ResolveSimulationOwner(fixture.ChildId).Error?.Code);
+        Assert.Equal(RegionErrorCodes.InvalidReference, fixture.Regions.Inspect(fixture.ChildId).Error?.Code);
+    }
+
+    [Fact]
+    public void ValidateReferencesDetectsEntityLifecycleDrift()
+    {
+        var fixture = CreateFixture();
+        fixture.Regions.AssignEntity(fixture.CharacterId, fixture.ChildId);
+        Assert.True(fixture.Entities.Retire(fixture.ChildId, 10).IsSuccess);
+
+        var result = fixture.Regions.ValidateReferences();
+
+        Assert.Equal(RegionErrorCodes.InvalidReference, result.Error?.Code);
     }
 
     [Fact]
@@ -183,6 +207,11 @@ public sealed class RegionFrameworkTests
         fixture => new RegionFrameworkSnapshot(1, fixture.RootId,
             [Record(fixture.RootId, null), Record(fixture.ChildId, fixture.RootId)], [],
             [new RegionAssignmentSnapshot(fixture.CharacterId, Id(99))]),
+        fixture => new RegionFrameworkSnapshot(1, fixture.RootId, [null!], [], []),
+        fixture => new RegionFrameworkSnapshot(1, fixture.RootId,
+            [Record(fixture.RootId, null), Record(fixture.ChildId, fixture.RootId)], [null!], []),
+        fixture => new RegionFrameworkSnapshot(1, fixture.RootId,
+            [Record(fixture.RootId, null), Record(fixture.ChildId, fixture.RootId)], [], [null!]),
     };
 
     private static RegionRecordSnapshot Record(EntityId id, EntityId? parent) =>

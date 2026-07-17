@@ -37,6 +37,17 @@ public sealed class CharacterRegistryTests
     }
 
     [Fact]
+    public void RegisterRejectsNullProfile()
+    {
+        var (characters, _, _) = CreateRegistry();
+
+        var result = characters.Register(null);
+
+        Assert.Equal(CharacterErrorCodes.InvalidSnapshot, result.Error?.Code);
+        Assert.Equal(0, characters.Count);
+    }
+
+    [Fact]
     public void RegisterRejectsMissingWrongCategoryAndNonActiveEntities()
     {
         var entities = new EntityRegistry();

@@ -20,8 +20,12 @@ public sealed class CharacterRegistry
 
     public int Count => profiles.Count;
 
-    public CharacterResult<CharacterProfileSnapshot> Register(CharacterProfileSnapshot profile)
+    public CharacterResult<CharacterProfileSnapshot> Register(CharacterProfileSnapshot? profile)
     {
+        if (profile is null)
+            return CharacterResult<CharacterProfileSnapshot>.Failure(
+                CharacterErrorCodes.InvalidSnapshot, "Character profile cannot be null.");
+
         if (profiles.ContainsKey(profile.EntityId))
         {
             return CharacterResult<CharacterProfileSnapshot>.Failure(

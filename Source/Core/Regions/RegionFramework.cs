@@ -163,14 +163,47 @@ public sealed class RegionFramework
         return RegionResult.Success();
     }
 
-    public EntityId ResolveSimulationOwner(EntityId id) => regions[id].SimulationOwnerId;
+    public RegionResult<EntityId> ResolveSimulationOwner(EntityId id) => IsUsableRegion(id, out var error)
+        ? RegionResult<EntityId>.Success(regions[id].SimulationOwnerId)
+        : RegionResult<EntityId>.Failure(error.Error!.Code, error.Error.Message);
 
-    public RegionDiagnostic Inspect(EntityId id)
+    public RegionResult<RegionDiagnostic> Inspect(EntityId id)
     {
+        if (!IsUsableRegion(id, out var error))
+            return RegionResult<RegionDiagnostic>.Failure(error.Error!.Code, error.Error.Message);
         var state = regions[id];
-        return new RegionDiagnostic(id, state.Category, state.ParentId,
+        return RegionResult<RegionDiagnostic>.Success(new RegionDiagnostic(id, state.Category, state.ParentId,
             QueryChildren(id).Select(r => r.Id).ToArray(), QueryAdjacent(id).Select(r => r.Id).ToArray(),
-            QueryAssignedEntities(id).Select(e => e.Id).ToArray(), state.SimulationState, state.SimulationOwnerId);
+            QueryAssignedEntities(id).Select(e => e.Id).ToArray(), state.SimulationState, state.SimulationOwnerId));
+    }
+
+    /// <summary>Validates Region-to-Entity references before persistence or simulation boundaries.</summary>
+    public RegionResult ValidateReferences()
+    {
+        if (RootRegionId is not { } rootId || !regions.ContainsKey(rootId))
+            return RegionResult.Failure(RegionErrorCodes.InvalidReference, "The root Region reference is missing.");
+
+        foreach (var region in regions.Values)
+        {
+            if (!EntityMatchesRegion(region.Id)) return Missing(region.Id);
+            var entity = entities.Find(region.Id).Value!;
+            if (entity.ParentId != region.ParentId)
+                return RegionResult.Failure(RegionErrorCodes.InvalidHierarchy, "Region and Entity hierarchy references disagree.");
+            if (!regions.ContainsKey(region.SimulationOwnerId) || !EntityMatchesRegion(region.SimulationOwnerId))
+                return RegionResult.Failure(RegionErrorCodes.InvalidReference, "Simulation owner is missing, terminal, or invalid.");
+            if (!Contains(regions, region.SimulationOwnerId, region.Id))
+                return RegionResult.Failure(RegionErrorCodes.InvalidState, "Simulation owner does not contain its Region.");
+        }
+
+        foreach (var edge in adjacency.Keys)
+            if (!IsUsableRegion(edge.First, out _) || !IsUsableRegion(edge.Second, out _))
+                return RegionResult.Failure(RegionErrorCodes.InvalidReference, "Adjacency contains a missing, terminal, or invalid Region.");
+
+        foreach (var entity in entities.ExportSnapshots().Where(item => item.RegionId is not null))
+            if (!IsUsableEntity(entity.Id, out _) || !IsUsableRegion(entity.RegionId!.Value, out _))
+                return RegionResult.Failure(RegionErrorCodes.InvalidReference, "Region assignment contains a missing, terminal, or invalid reference.");
+
+        return RegionResult.Success();
     }
 
     public RegionFrameworkSnapshot ExportSnapshot()
@@ -213,7 +246,10 @@ public sealed class RegionFramework
             return RegionResult<PreparedState>.Failure(RegionErrorCodes.IncompatibleSnapshot, "Region snapshot version is unsupported.");
         if (snapshot.Regions is null || snapshot.Adjacency is null || snapshot.Assignments is null || snapshot.RootRegionId.Value == Guid.Empty)
             return RegionResult<PreparedState>.Failure(RegionErrorCodes.InvalidSnapshot, "Region snapshot collections and root ID must be valid.");
-        if (snapshot.Regions.Count == 0 || snapshot.Regions.Select(r => r.Id).Distinct().Count() != snapshot.Regions.Count)
+        if (snapshot.Regions.Count == 0 || snapshot.Regions.Any(record => record is null) ||
+            snapshot.Adjacency.Any(edge => edge is null) || snapshot.Assignments.Any(assignment => assignment is null))
+            return RegionResult<PreparedState>.Failure(RegionErrorCodes.InvalidSnapshot, "Region snapshot collections cannot contain null entries.");
+        if (snapshot.Regions.Select(r => r.Id).Distinct().Count() != snapshot.Regions.Count)
             return RegionResult<PreparedState>.Failure(RegionErrorCodes.InvalidSnapshot, "Region records must be non-empty and uniquely identified.");
 
         var built = new Dictionary<EntityId, RegionState>();

@@ -2,6 +2,7 @@ using Mythos.Framework;
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Npcs;
+using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Time;
 
@@ -75,6 +76,19 @@ var npcUpdate = npcs.Update(characterEntity.Id, new WorldTimestamp(3), 4);
 if (!npc.IsSuccess || !npcUpdate.IsSuccess || npcUpdate.Value!.ProcessedTransitions != 2 || !npcs.ValidateReferences().IsSuccess)
 {
     Console.Error.WriteLine("NPC Framework smoke validation failed.");
+    return 1;
+}
+
+var storage = new InMemorySaveStorage();
+var persistence = new WorldPersistence(storage);
+var world = new PersistentWorldState(entities, clock, regions, characters, npcs);
+var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
+var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
+if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
+    loaded.Value.Entities.Find(characterEntity.Id).Value!.RegionId != child.Value!.Id ||
+    loaded.Value.Npcs.Find(characterEntity.Id).Value!.CompletedTransitions != npcUpdate.Value.Profile.CompletedTransitions)
+{
+    Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;
 }
 

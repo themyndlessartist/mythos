@@ -1,6 +1,7 @@
 using Mythos.Framework;
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
+using Mythos.Framework.Npcs;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Time;
 
@@ -53,6 +54,30 @@ if (!character.IsSuccess || !characters.ValidateReferences().IsSuccess)
     return 1;
 }
 
+if (!regions.AssignEntity(characterEntity.Id, child.Value!.Id).IsSuccess)
+{
+    Console.Error.WriteLine("NPC fixture Region assignment failed.");
+    return 1;
+}
+
+var npcReferences = new SmokeNpcReferences();
+var npcs = new NpcFramework(entities, characters, regions, npcReferences);
+var npc = npcs.Register(new NpcProfileSnapshot(
+    characterEntity.Id,
+    npcReferences.Purpose,
+    npcReferences.Schedule.Id,
+    npcReferences.Schedule.Entries![0].StateId,
+    0,
+    new WorldTimestamp(2),
+    NpcSimulationTier.Abstract,
+    0));
+var npcUpdate = npcs.Update(characterEntity.Id, new WorldTimestamp(3), 4);
+if (!npc.IsSuccess || !npcUpdate.IsSuccess || npcUpdate.Value!.ProcessedTransitions != 2 || !npcs.ValidateReferences().IsSuccess)
+{
+    Console.Error.WriteLine("NPC Framework smoke validation failed.");
+    return 1;
+}
+
 Console.WriteLine("Mythos framework smoke test passed.");
 return 0;
 
@@ -61,4 +86,18 @@ file sealed class SmokeCharacterReferences : ICharacterReferenceValidator
     public bool IsKnownStatus(CharacterStatusId statusId) => statusId == new CharacterStatusId("available");
 
     public bool IsKnownLifeStage(LifeStageId lifeStageId) => lifeStageId == new LifeStageId("established");
+}
+
+file sealed class SmokeNpcReferences : INpcReferenceProvider
+{
+    public NpcPurposeId Purpose { get; } = new("neutral-participant");
+    public NpcScheduleDefinition Schedule { get; } = new(
+        new NpcScheduleId("neutral-cycle"),
+        [
+            new NpcScheduleEntry(new NpcScheduleStateId("state-a"), new WorldDuration(1)),
+            new NpcScheduleEntry(new NpcScheduleStateId("state-b"), new WorldDuration(1)),
+        ]);
+
+    public bool IsKnownPurpose(NpcPurposeId purposeId) => purposeId == Purpose;
+    public NpcScheduleDefinition? FindSchedule(NpcScheduleId scheduleId) => scheduleId == Schedule.Id ? Schedule : null;
 }

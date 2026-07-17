@@ -12,6 +12,7 @@ All notable changes to Mythos will be documented in this file.
 - Engine-independent Time Framework prototype with an authoritative clock, configurable calendars, rational time scaling, composable pause reasons, deterministic schedules and simulation layers, bounded catch-up, snapshots, and optional Event Framework publication.
 - Engine-independent Region Framework prototype with Entity-backed Region identity, configurable hierarchy, adjacency metadata, validated assignment and transfer, simulation fidelity and ownership, deterministic queries, diagnostics, and atomic snapshot restore.
 - Engine-independent Character Framework prototype with one-to-one active Character Entity profiles, minimal identity/status/life-stage references, deterministic queries, and atomic versioned snapshot restoration.
+- Minimal NPC Framework fixture with validated Character and Region composition, deterministic active/abstract schedule catch-up, diagnostics, and versioned atomic snapshot restoration.
 - Automated Entity, Event, Time, Region, and Character unit tests plus cross-platform build verification scripts.
 - Explicit approval and documentation of xUnit 3.2.0 as M-001 prototype test tooling.
 - Approved SD-001 through SD-005 executive documents, ADR-001 through ADR-024, STD-001, SYS-001 through SYS-007, and M-001 milestone documentation.

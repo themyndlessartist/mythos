@@ -91,7 +91,7 @@ Status: Planned
 
 # 8. Parallel Tooling Track — Content Studio
 
-Status: Specification Drafted; Implementation Not Started
+Status: Specifications Approved; Implementation Starting
 
 This track proceeds alongside M-001 without changing its scope, priority, or exit conditions.
 
@@ -99,7 +99,7 @@ This track proceeds alongside M-001 without changing its scope, priority, or exi
 - DATA-001 through DATA-004 authoring/export contracts
 - Local-first authoring and validation
 - Engine-neutral content-package export for a later Godot importer
-- No web-application implementation until the draft specifications are approved
+- React, TypeScript, and Vite MVP implementation under `Tools/ContentStudio`
 
 --------------------------------------------
 

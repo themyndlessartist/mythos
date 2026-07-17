@@ -46,3 +46,4 @@ ADR files are stored in `Docs/Architecture/ADR/`.
 | ADR-022 | Persistent World History | Approved | [ADR-022_Persistent_World_History.md](../Architecture/ADR/ADR-022_Persistent_World_History.md) |
 | ADR-023 | Godot and C# Technology Stack | Approved | [ADR-023_Godot_and_CSharp_Technology_Stack.md](../Architecture/ADR/ADR-023_Godot_and_CSharp_Technology_Stack.md) |
 | ADR-024 | M-001 Prototype Decision Governance and Test Tooling | Approved | [ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md) |
+| ADR-025 | Content Studio MVP Technology Stack | Approved | [ADR-025_Content_Studio_MVP_Technology_Stack.md](../Architecture/ADR/ADR-025_Content_Studio_MVP_Technology_Stack.md) |

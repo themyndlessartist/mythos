@@ -3,7 +3,7 @@
 - Document ID: DATA-003
 - Title: Sprite/Animation Asset Manifest
 - Version: 0.1
-- Status: Draft for Approval
+- Status: Approved
 - Owner: Mythos Executive Development
 - Last Updated: July 2026
 

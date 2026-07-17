@@ -8,7 +8,7 @@
 - Status: In Progress
 - Owner: Mythos Executive Development
 - Last Updated: July 2026
-- Applies Through Commit: `feadbf8`
+- Applies Through Commit: `0d50852`
 - Approval/Decision References: [ADR-024 M-001 Prototype Decision Governance and Test Tooling](../Architecture/ADR/ADR-024_M-001_Prototype_Decision_Governance_and_Test_Tooling.md)
 
 ## Implemented Scope

@@ -24,6 +24,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Changed
 
+- Scoped NPC operational validation to the relevant Character profile and Region assignment while retaining single-pass global validation at explicit world-integrity boundaries.
 - Hardened Entity snapshot restoration against undefined lifecycle values, uninitialized identifiers, null collections, invalid timestamp/state combinations, and malformed references using structured failures.
 - Made Entity snapshot collections defensive read-only projections.
 - Changed Event reference handling to reject referenced events by default unless an explicit validator is supplied, with consistent source, target, Region-category, missing, and terminal-state validation.

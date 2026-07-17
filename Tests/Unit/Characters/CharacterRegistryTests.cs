@@ -228,6 +228,20 @@ public sealed class CharacterRegistryTests
     }
 
     [Fact]
+    public void ScopedValidationIgnoresUnrelatedProfileDrift()
+    {
+        var (characters, entities, validId) = CreateRegistry();
+        Assert.True(characters.Register(Profile(validId)).IsSuccess);
+        var driftedId = entities.Create(new EntityCategory("Character"), 0).Value!.Id;
+        Assert.True(characters.Register(Profile(driftedId)).IsSuccess);
+        Assert.True(entities.Retire(driftedId, 1).IsSuccess);
+
+        Assert.True(characters.ValidateReferences(validId).IsSuccess);
+        Assert.Equal(CharacterErrorCodes.EntityNotActive, characters.ValidateReferences(driftedId).Error?.Code);
+        Assert.Equal(CharacterErrorCodes.EntityNotActive, characters.ValidateReferences().Error?.Code);
+    }
+
+    [Fact]
     public void IdentifierConstructorsRejectBlankValuesAndNormalizeWhitespace()
     {
         Assert.Throws<ArgumentException>(() => new CharacterIdentity(" "));

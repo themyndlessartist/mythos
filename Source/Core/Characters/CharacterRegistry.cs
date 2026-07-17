@@ -126,6 +126,19 @@ public sealed class CharacterRegistry
         return CharacterResult.Success();
     }
 
+    /// <summary>Validates the registered Character profile for one Entity without scanning the registry.</summary>
+    public CharacterResult ValidateReferences(EntityId entityId)
+    {
+        if (!profiles.TryGetValue(entityId, out var profile))
+        {
+            return CharacterResult.Failure(
+                CharacterErrorCodes.ProfileNotFound,
+                $"Character profile for entity '{entityId}' was not found.");
+        }
+
+        return ValidateProfile(profile);
+    }
+
     private CharacterResult ValidateProfile(CharacterProfileSnapshot profile)
     {
         if (profile.EntityId.Value == Guid.Empty)

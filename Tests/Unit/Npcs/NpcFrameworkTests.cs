@@ -103,6 +103,19 @@ public sealed class NpcFrameworkTests
         Assert.Equal(NpcErrorCodes.InvalidReference, characterDrift.Npcs.ValidateReferences().Error?.Code);
     }
 
+    [Fact]
+    public void OperationalValidationIgnoresUnrelatedCharacterAndRegionDrift()
+    {
+        var fixture = Fixture.Create();
+        fixture.AddUnrelatedDrift();
+
+        Assert.True(fixture.Npcs.Register(fixture.Profile()).IsSuccess);
+        Assert.True(fixture.Npcs.Update(fixture.CharacterId, new WorldTimestamp(25), 10).IsSuccess);
+        Assert.True(fixture.Npcs.SetSimulationTier(fixture.CharacterId, NpcSimulationTier.Abstract).IsSuccess);
+        Assert.Equal("valid", fixture.Npcs.Inspect(fixture.CharacterId).Value!.ReferenceStatus);
+        Assert.Equal(NpcErrorCodes.InvalidReference, fixture.Npcs.ValidateReferences().Error?.Code);
+    }
+
     [Theory]
     [InlineData(EntityLifecycleState.Retired)]
     [InlineData(EntityLifecycleState.Destroyed)]
@@ -274,6 +287,18 @@ public sealed class NpcFrameworkTests
         public void InvalidatePurpose() => references.IsPurposeAvailable = false;
         public void RemoveSchedule() => references.IsScheduleAvailable = false;
         public void ReturnMismatchedScheduleId() => references.UseMismatchedScheduleId = true;
+
+        public void AddUnrelatedDrift()
+        {
+            var unrelatedCharacter = Entities.Create(new EntityCategory("Character"), 0).Value!.Id;
+            Assert.True(Characters.Register(new CharacterProfileSnapshot(unrelatedCharacter,
+                new CharacterIdentity("unrelated"), Status, Stage)).IsSuccess);
+            Assert.True(Entities.Retire(unrelatedCharacter, 1).IsSuccess);
+
+            var rootId = Regions.RootRegionId!.Value;
+            var unrelatedRegion = Regions.CreateRegion(new RegionCategory("unrelated-area"), rootId, 0).Value!;
+            Assert.True(Entities.Retire(unrelatedRegion.Id, 1).IsSuccess);
+        }
 
         private sealed class CharacterReferences : ICharacterReferenceValidator
         {

@@ -164,6 +164,18 @@ public sealed class RegionFrameworkTests
     }
 
     [Fact]
+    public void ScopedAssignmentValidationIgnoresUnrelatedRegionDrift()
+    {
+        var fixture = CreateFixture();
+        Assert.True(fixture.Regions.AssignEntity(fixture.CharacterId, fixture.ChildId).IsSuccess);
+        var unrelated = fixture.Regions.CreateRegion(NeutralArea, fixture.RootId, 1).Value!;
+        Assert.True(fixture.Entities.Retire(unrelated.Id, 10).IsSuccess);
+
+        Assert.True(fixture.Regions.ValidateAssignment(fixture.CharacterId).IsSuccess);
+        Assert.Equal(RegionErrorCodes.InvalidReference, fixture.Regions.ValidateReferences().Error?.Code);
+    }
+
+    [Fact]
     public void ExportIsDefensiveDeterministicAndRoundTripsIntoFreshRuntime()
     {
         var source = CreateFixture();

@@ -206,6 +206,17 @@ public sealed class RegionFramework
         return RegionResult.Success();
     }
 
+    /// <summary>Validates one Entity's current Region assignment without scanning unrelated Region state.</summary>
+    public RegionResult ValidateAssignment(EntityId entityId)
+    {
+        if (!IsUsableEntity(entityId, out var entityError)) return entityError;
+        var entity = entities.Find(entityId).Value!;
+        if (entity.RegionId is not { } regionId || !IsUsableRegion(regionId, out _))
+            return RegionResult.Failure(RegionErrorCodes.InvalidReference,
+                $"Entity '{entityId}' has a missing, terminal, or invalid Region assignment.");
+        return RegionResult.Success();
+    }
+
     public RegionFrameworkSnapshot ExportSnapshot()
     {
         var records = Ordered(regions.Values);

@@ -23,6 +23,7 @@ The M-001 prototype currently provides:
 - Atomic structured restoration into a fresh candidate state
 - Explicit duplicate, identifier, Entity lifecycle/category, reference, version, and malformed-snapshot failures
 - Post-registration reference validation for cross-domain lifecycle changes
+- Registry-wide and Entity-scoped reference validation for world-integrity and operational callers
 - Automated xUnit and smoke coverage independent of Godot
 
 ## Boundaries
@@ -49,7 +50,7 @@ The following decisions are reversible, prototype-local M-001 choices. They do n
 ## Known Limitations
 
 - No Character mutation interface is implemented; M-001 profiles are registered and restored as whole records.
-- The Character Registry does not subscribe to Entity lifecycle changes. Callers use `ValidateReferences` before persistence or simulation boundaries to diagnose profiles whose Entity became non-active.
+- The Character Registry does not subscribe to Entity lifecycle changes. World-integrity callers use parameterless `ValidateReferences`; operational callers use `ValidateReferences(EntityId)` to diagnose only the relevant profile without allowing unrelated drift to block valid work.
 - Identity uniqueness is one profile per Entity ID; cross-profile naming uniqueness is neither specified nor enforced.
 - Snapshot migrations and multi-domain restore ordering await SYS-006 implementation.
 - Status and life-stage definition loading is outside this slice; callers must provide a validator backed by approved data.

@@ -86,9 +86,13 @@ public sealed class NpcFramework
 
     public NpcResult ValidateReferences()
     {
+        var characterResult = characters.ValidateReferences();
+        if (!characterResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, characterResult.Error!.Message);
+        var regionResult = regions.ValidateReferences();
+        if (!regionResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, regionResult.Error!.Message);
         foreach (var profile in profiles.Values.OrderBy(item => item.CharacterEntityId.Value))
         {
-            var result = ValidateOperationalProfile(profile);
+            var result = ValidateProfile(profile);
             if (!result.IsSuccess) return result;
         }
         return NpcResult.Success();
@@ -151,11 +155,13 @@ public sealed class NpcFramework
 
     private NpcResult ValidateOperationalProfile(NpcProfileSnapshot profile)
     {
-        var characterResult = characters.ValidateReferences();
+        var profileResult = ValidateProfile(profile);
+        if (!profileResult.IsSuccess) return profileResult;
+        var characterResult = characters.ValidateReferences(profile.CharacterEntityId);
         if (!characterResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, characterResult.Error!.Message);
-        var regionResult = regions.ValidateReferences();
+        var regionResult = regions.ValidateAssignment(profile.CharacterEntityId);
         if (!regionResult.IsSuccess) return NpcResult.Failure(NpcErrorCodes.InvalidReference, regionResult.Error!.Message);
-        return ValidateProfile(profile);
+        return NpcResult.Success();
     }
 
     private static bool ValidSchedule(NpcScheduleDefinition? schedule) => schedule is not null && Initialized(schedule.Id.Value) &&

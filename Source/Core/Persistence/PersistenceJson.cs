@@ -9,6 +9,7 @@ using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
+using Mythos.Framework.Organizations;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.Persistence;
@@ -31,6 +32,7 @@ internal static class PersistenceJson
         options.Converters.Add(new FactIdConverter());
         options.Converters.Add(new HistoryEntryIdConverter());
         options.Converters.Add(new ReputationIdConverter());
+        options.Converters.Add(new MembershipIdConverter());
         options.Converters.Add(new StringValueConverter<EntityCategory>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<EntityTag>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ComponentTypeId>(v => new(v), v => v.Value));
@@ -51,6 +53,8 @@ internal static class PersistenceJson
         options.Converters.Add(new StringValueConverter<ReputationAudienceTypeId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ReputationDimensionId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<PropertyKindId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<OrganizationKindId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<OrganizationRoleId>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldTimestamp>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldDuration>(v => new(v), v => v.Value));
         options.Converters.Add(new TimeScaleConverter());
@@ -115,6 +119,15 @@ internal static class PersistenceJson
             Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
                 ? new ReputationId(value) : throw new JsonException("Reputation ID is invalid.");
         public override void Write(Utf8JsonWriter writer, ReputationId value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.ToString());
+    }
+
+    private sealed class MembershipIdConverter : JsonConverter<MembershipId>
+    {
+        public override MembershipId Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
+                ? new MembershipId(value) : throw new JsonException("Membership ID is invalid.");
+        public override void Write(Utf8JsonWriter writer, MembershipId value, JsonSerializerOptions options) =>
             writer.WriteStringValue(value.ToString());
     }
 

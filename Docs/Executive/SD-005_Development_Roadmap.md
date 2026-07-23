@@ -56,7 +56,7 @@ Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prot
 - SYS-011 Reputation Framework — Implemented
 - SYS-012 Property Framework — Implemented
 - Economy
-- SYS-013 Organization Framework — Specified
+- SYS-013 Organization Framework — Implemented
 - SYS-009 Information and Knowledge Framework — Implemented
 - SYS-010 World History Framework — Implemented
 - Dynamic events

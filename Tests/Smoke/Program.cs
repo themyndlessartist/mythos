@@ -9,6 +9,7 @@ using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
+using Mythos.Framework.Organizations;
 using Mythos.Framework.Time;
 
 if (FrameworkAssembly.Name != "Mythos.Framework")
@@ -126,7 +127,18 @@ if (!property.IsSuccess)
     Console.Error.WriteLine("Property Framework smoke validation failed.");
     return 1;
 }
-var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history, reputation, properties);
+var organizationEntity = entities.Create(new EntityCategory("Organization"), clock.Timestamp.Value).Value!;
+var organizations = new OrganizationFramework(entities);
+var organization = organizations.Register(organizationEntity.Id, new OrganizationKindId("fixture-group"), clock.Timestamp);
+var membership = organizations.AddMembership(organizationEntity.Id, characterEntity.Id,
+    [new OrganizationRoleId("member")], clock.Timestamp);
+if (!organization.IsSuccess || !membership.IsSuccess)
+{
+    Console.Error.WriteLine("Organization Framework smoke validation failed.");
+    return 1;
+}
+var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history,
+    reputation, properties, organizations);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
@@ -136,7 +148,8 @@ if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != cl
     !loaded.Value.Information.IsAuthoritative(proposition.Id) ||
     loaded.Value.History.Find(historyEntry.Value!.Id).Value!.RegionEntityId != child.Value.Id ||
     loaded.Value.Reputation.Find(reputationRecord.Value!.Id).Value!.Value != 0 ||
-    loaded.Value.Properties.Find(characterEntity.Id).Value!.KindId != new PropertyKindId("fixture-asset"))
+    loaded.Value.Properties.Find(characterEntity.Id).Value!.KindId != new PropertyKindId("fixture-asset") ||
+    loaded.Value.Organizations.FindActiveMembership(organizationEntity.Id, characterEntity.Id).Value!.Id != membership.Value!.Id)
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

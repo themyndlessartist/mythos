@@ -9,6 +9,7 @@ using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
+using Mythos.Framework.Organizations;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.UnitTests.Persistence;
@@ -42,6 +43,10 @@ public sealed class WorldPersistenceTests
             loaded.Value.History.ExportSnapshot().Entries!.Single().Id);
         Assert.Equal(fixture.World.Reputation.ExportSnapshot().Records, loaded.Value.Reputation.ExportSnapshot().Records);
         Assert.Equal(fixture.World.Properties.ExportSnapshot().Profiles, loaded.Value.Properties.ExportSnapshot().Profiles);
+        Assert.Equal(fixture.World.Organizations.ExportSnapshot().Memberships!.Single().Id,
+            loaded.Value.Organizations.ExportSnapshot().Memberships!.Single().Id);
+        Assert.Equal(fixture.World.Organizations.ExportSnapshot().Memberships!.Single().RoleIds,
+            loaded.Value.Organizations.ExportSnapshot().Memberships!.Single().RoleIds);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
         Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
@@ -292,6 +297,28 @@ public sealed class WorldPersistenceTests
         Assert.Null(result.Value);
     }
 
+    [Fact]
+    public void BrokenOrganizationMemberReferenceRejectsCompleteWorldLoad()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var persistence = new WorldPersistence(storage);
+        Assert.True(persistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value.ToArray());
+        var original = "00000000-0000-0000-0000-000000000003"u8.ToArray();
+        var missing = "00000000-0000-0000-0000-000000000099"u8.ToArray();
+        var index = data["organizations"].AsSpan().LastIndexOf(original);
+        Assert.True(index >= 0);
+        missing.CopyTo(data["organizations"], index);
+        RewriteManifest(data, "organizations");
+        Replace(storage, data);
+
+        var result = persistence.Load("slot", fixture.Context);
+
+        Assert.Equal(PersistenceErrorCodes.UnresolvedReference, result.Error?.Code);
+        Assert.Null(result.Value);
+    }
+
     private static (Fixture Fixture, InMemorySaveStorage Storage, WorldPersistence Persistence) Saved()
     {
         var fixture = Fixture.Create();
@@ -330,6 +357,7 @@ public sealed class WorldPersistenceTests
             var ownerId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000004"));
             var siblingId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000005"));
             var retiredId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000006"));
+            var organizationId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000012"));
             Assert.True(entities.Register(Entity(rootId, "Region", null, null)).IsSuccess);
             Assert.True(entities.Register(Entity(regionId, "Region", rootId, null)).IsSuccess);
             Assert.True(entities.Register(Entity(ownerId, "Reference", null, null, EntityLifecycleState.Inactive)).IsSuccess);
@@ -338,6 +366,7 @@ public sealed class WorldPersistenceTests
                 [new("historical")], null, null, null, [new("archive")], 1, 6)).IsSuccess);
             Assert.True(entities.Register(new EntitySnapshot(characterId, new("Character"), EntityLifecycleState.Active,
                 [new("tag-z"), new("tag-a")], null, ownerId, regionId, [new("component-z"), new("component-a")], 2, null)).IsSuccess);
+            Assert.True(entities.Register(Entity(organizationId, "Organization", null, regionId)).IsSuccess);
 
             var metadata = Metadata(reverseMetadataInsertion);
 
@@ -387,7 +416,13 @@ public sealed class WorldPersistenceTests
             var properties = new PropertyFramework(entities);
             Assert.True(properties.Register(characterId, new PropertyKindId("fixture-asset"),
                 new WorldTimestamp(5), "fixture:property").IsSuccess);
-            return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history, reputation, properties), new(calendar, references, references), characterId, regionId);
+            var organizations = new OrganizationFramework(entities, new FixedMembershipIdGenerator());
+            Assert.True(organizations.Register(organizationId, new OrganizationKindId("fixture-group"),
+                new WorldTimestamp(5), "fixture:organization").IsSuccess);
+            Assert.True(organizations.AddMembership(organizationId, characterId, [new OrganizationRoleId("member")],
+                new WorldTimestamp(5), "fixture:membership").IsSuccess);
+            return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history,
+                reputation, properties, organizations), new(calendar, references, references), characterId, regionId);
         }
 
         private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
@@ -429,6 +464,11 @@ public sealed class WorldPersistenceTests
     private sealed class FixedReputationIdGenerator : IReputationIdGenerator
     {
         public ReputationId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000011"));
+    }
+
+    private sealed class FixedMembershipIdGenerator : IMembershipIdGenerator
+    {
+        public MembershipId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000013"));
     }
 
     private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage

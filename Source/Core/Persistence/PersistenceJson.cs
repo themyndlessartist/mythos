@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
+using Mythos.Framework.Information;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
@@ -23,6 +24,8 @@ internal static class PersistenceJson
         options.Converters.Add(new OrdinalIntegerDictionaryConverter());
         options.Converters.Add(new EntityIdConverter());
         options.Converters.Add(new RelationshipIdConverter());
+        options.Converters.Add(new InformationIdConverter());
+        options.Converters.Add(new FactIdConverter());
         options.Converters.Add(new StringValueConverter<EntityCategory>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<EntityTag>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ComponentTypeId>(v => new(v), v => v.Value));
@@ -38,6 +41,7 @@ internal static class PersistenceJson
         options.Converters.Add(new StringValueConverter<NpcScheduleId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<NpcScheduleStateId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<RelationshipKindId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<InformationTypeId>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldTimestamp>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldDuration>(v => new(v), v => v.Value));
         options.Converters.Add(new TimeScaleConverter());
@@ -70,6 +74,22 @@ internal static class PersistenceJson
                 ? new RelationshipId(value) : throw new JsonException("Relationship ID is invalid.");
         public override void Write(Utf8JsonWriter writer, RelationshipId value, JsonSerializerOptions options) =>
             writer.WriteStringValue(value.ToString());
+    }
+
+    private sealed class InformationIdConverter : JsonConverter<InformationId>
+    {
+        public override InformationId Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
+                ? new InformationId(value) : throw new JsonException("Information ID is invalid.");
+        public override void Write(Utf8JsonWriter writer, InformationId value, JsonSerializerOptions options) => writer.WriteStringValue(value.ToString());
+    }
+
+    private sealed class FactIdConverter : JsonConverter<FactId>
+    {
+        public override FactId Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
+                ? new FactId(value) : throw new JsonException("Fact ID is invalid.");
+        public override void Write(Utf8JsonWriter writer, FactId value, JsonSerializerOptions options) => writer.WriteStringValue(value.ToString());
     }
 
     private sealed class TimeScaleConverter : JsonConverter<TimeScale>

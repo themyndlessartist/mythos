@@ -1,6 +1,7 @@
 using Mythos.Framework;
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
+using Mythos.Framework.Information;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
@@ -89,13 +90,24 @@ if (!relationship.IsSuccess || !relationships.SetDimension(relationship.Value!.I
     Console.Error.WriteLine("Relationship Framework smoke validation failed.");
     return 1;
 }
-var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships);
+var information = new InformationFramework(entities);
+var proposition = information.Create(new InformationTypeId("fixture-location"), characterEntity.Id, child.Value.Id,
+    new Dictionary<string, string> { ["state"] = "present" }, clock.Timestamp).Value!;
+var fact = information.DeclareFact(proposition.Id, clock.Timestamp);
+var awareness = information.SetAwareness(characterEntity.Id, proposition.Id, EpistemicStance.Known, 1000, clock.Timestamp);
+if (!fact.IsSuccess || !awareness.IsSuccess)
+{
+    Console.Error.WriteLine("Information Framework smoke validation failed.");
+    return 1;
+}
+var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
     loaded.Value.Entities.Find(characterEntity.Id).Value!.RegionId != child.Value!.Id ||
     loaded.Value.Npcs.Find(characterEntity.Id).Value!.CompletedTransitions != npcUpdate.Value.Profile.CompletedTransitions ||
-    loaded.Value.Relationships.Find(relationship.Value.Id).Value!.Dimensions!["trust"] != 10)
+    loaded.Value.Relationships.Find(relationship.Value.Id).Value!.Dimensions!["trust"] != 10 ||
+    !loaded.Value.Information.IsAuthoritative(proposition.Id))
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

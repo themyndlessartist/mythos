@@ -2,6 +2,7 @@ using Mythos.Framework;
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Information;
+using Mythos.Framework.History;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
@@ -100,14 +101,23 @@ if (!fact.IsSuccess || !awareness.IsSuccess)
     Console.Error.WriteLine("Information Framework smoke validation failed.");
     return 1;
 }
-var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information);
+var history = new WorldHistoryFramework(entities, regions);
+var historyEntry = history.Record(new HistoryTypeId("fixture-created"), clock.Timestamp,
+    [characterEntity.Id], child.Value.Id, 100, new Dictionary<string, string> { ["state"] = "created" }, "event:fixture");
+if (!historyEntry.IsSuccess)
+{
+    Console.Error.WriteLine("World History Framework smoke validation failed.");
+    return 1;
+}
+var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
     loaded.Value.Entities.Find(characterEntity.Id).Value!.RegionId != child.Value!.Id ||
     loaded.Value.Npcs.Find(characterEntity.Id).Value!.CompletedTransitions != npcUpdate.Value.Profile.CompletedTransitions ||
     loaded.Value.Relationships.Find(relationship.Value.Id).Value!.Dimensions!["trust"] != 10 ||
-    !loaded.Value.Information.IsAuthoritative(proposition.Id))
+    !loaded.Value.Information.IsAuthoritative(proposition.Id) ||
+    loaded.Value.History.Find(historyEntry.Value!.Id).Value!.RegionEntityId != child.Value.Id)
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

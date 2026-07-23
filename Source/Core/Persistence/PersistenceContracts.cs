@@ -1,6 +1,7 @@
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Information;
+using Mythos.Framework.History;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Relationships;
 using Mythos.Framework.Regions;
@@ -62,7 +63,8 @@ public sealed record EntityDomainSnapshot(int Version, IReadOnlyList<EntitySnaps
 public sealed class PersistentWorldState
 {
     public PersistentWorldState(EntityRegistry entities, WorldClock clock, RegionFramework regions,
-        CharacterRegistry characters, NpcFramework npcs, RelationshipFramework relationships, InformationFramework information)
+        CharacterRegistry characters, NpcFramework npcs, RelationshipFramework relationships, InformationFramework information,
+        WorldHistoryFramework history)
     {
         Entities = entities ?? throw new ArgumentNullException(nameof(entities));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -71,6 +73,7 @@ public sealed class PersistentWorldState
         Npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
         Relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
         Information = information ?? throw new ArgumentNullException(nameof(information));
+        History = history ?? throw new ArgumentNullException(nameof(history));
     }
 
     public EntityRegistry Entities { get; }
@@ -80,6 +83,7 @@ public sealed class PersistentWorldState
     public NpcFramework Npcs { get; }
     public RelationshipFramework Relationships { get; }
     public InformationFramework Information { get; }
+    public WorldHistoryFramework History { get; }
 }
 
 public sealed record PersistenceLoadContext(

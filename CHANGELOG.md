@@ -6,6 +6,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Implemented SYS-010 World History Framework with immutable chronological records, participant and Region references, deterministic queries, atomic snapshots, optional events, and complete-world persistence.
 - Approved SYS-010 World History Framework specification for append-only, persistent, setting-agnostic historical records.
 - Implemented SYS-009 Information and Knowledge Framework with immutable propositions, authoritative Facts, entity Awareness, false-belief support, atomic snapshots, optional events, and complete-world persistence.
 - Approved SYS-009 Information and Knowledge Framework specification separating immutable propositions, authoritative facts, and entity awareness.

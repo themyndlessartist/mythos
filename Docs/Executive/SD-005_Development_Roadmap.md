@@ -58,7 +58,7 @@ Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prot
 - Organizations
 - Property
 - SYS-009 Information and Knowledge Framework — Implemented
-- SYS-010 World History Framework — Specified
+- SYS-010 World History Framework — Implemented
 - Dynamic events
 
 --------------------------------------------

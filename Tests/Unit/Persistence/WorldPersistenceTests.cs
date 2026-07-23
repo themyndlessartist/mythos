@@ -2,6 +2,7 @@ using System.Text.Json;
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Information;
+using Mythos.Framework.History;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
@@ -35,6 +36,8 @@ public sealed class WorldPersistenceTests
         Assert.Equal(fixture.World.Information.ExportSnapshot().Information!.Single().Id,
             loaded.Value.Information.ExportSnapshot().Information!.Single().Id);
         Assert.Equal(fixture.World.Information.ExportSnapshot().Awareness, loaded.Value.Information.ExportSnapshot().Awareness);
+        Assert.Equal(fixture.World.History.ExportSnapshot().Entries!.Single().Id,
+            loaded.Value.History.ExportSnapshot().Entries!.Single().Id);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
         Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
@@ -219,6 +222,28 @@ public sealed class WorldPersistenceTests
         Assert.Null(result.Value);
     }
 
+    [Fact]
+    public void BrokenHistoryRegionReferenceRejectsCompleteWorldLoad()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var persistence = new WorldPersistence(storage);
+        Assert.True(persistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value.ToArray());
+        var original = "00000000-0000-0000-0000-000000000002"u8.ToArray();
+        var missing = "00000000-0000-0000-0000-000000000099"u8.ToArray();
+        var index = data["history"].AsSpan().IndexOf(original);
+        Assert.True(index >= 0);
+        missing.CopyTo(data["history"], index);
+        RewriteManifest(data, "history");
+        Replace(storage, data);
+
+        var result = persistence.Load("slot", fixture.Context);
+
+        Assert.Equal(PersistenceErrorCodes.UnresolvedReference, result.Error?.Code);
+        Assert.Null(result.Value);
+    }
+
     private static (Fixture Fixture, InMemorySaveStorage Storage, WorldPersistence Persistence) Saved()
     {
         var fixture = Fixture.Create();
@@ -305,7 +330,10 @@ public sealed class WorldPersistenceTests
             Assert.True(information.DeclareFact(proposition.Id, new WorldTimestamp(3), "fixture:truth").IsSuccess);
             Assert.True(information.SetAwareness(characterId, proposition.Id, EpistemicStance.Known, 900,
                 new WorldTimestamp(4), ownerId, "fixture:awareness").IsSuccess);
-            return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information), new(calendar, references, references), characterId, regionId);
+            var history = new WorldHistoryFramework(entities, regions, new FixedHistoryIdGenerator());
+            Assert.True(history.Record(new HistoryTypeId("fixture-created"), new WorldTimestamp(5),
+                [characterId, ownerId], regionId, 300, metadata, "event:fixture-history", "fixture:history").IsSuccess);
+            return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history), new(calendar, references, references), characterId, regionId);
         }
 
         private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
@@ -337,6 +365,11 @@ public sealed class WorldPersistenceTests
     {
         public InformationId CreateInformationId() => new(Guid.Parse("00000000-0000-0000-0000-000000000008"));
         public FactId CreateFactId() => new(Guid.Parse("00000000-0000-0000-0000-000000000009"));
+    }
+
+    private sealed class FixedHistoryIdGenerator : IHistoryEntryIdGenerator
+    {
+        public HistoryEntryId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000010"));
     }
 
     private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage

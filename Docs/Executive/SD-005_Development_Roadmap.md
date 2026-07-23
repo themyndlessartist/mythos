@@ -65,7 +65,7 @@ Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prot
 
 # 6. Phase 4 — Foundation Prototype
 
-Status: In Progress
+Status: Complete
 
 Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype.md)
 
@@ -80,7 +80,7 @@ Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype
 
 # 7. Phase 5 — Framework Alpha
 
-Status: Planned
+Status: In Progress
 
 - Expand reusable systems
 - Add development and debugging tools
@@ -91,7 +91,7 @@ Status: Planned
 
 # 8. Parallel Tooling Track — Content Studio
 
-Status: Specifications Approved; Implementation Starting
+Status: MVP Implemented and Verified
 
 This track proceeds alongside M-001 without changing its scope, priority, or exit conditions.
 

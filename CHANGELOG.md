@@ -25,6 +25,8 @@ All notable changes to Mythos will be documented in this file.
 
 ### Changed
 
+- Completed M-001 Foundation Prototype after architecture review and canonical verification of 150 unit tests, smoke coverage, and Godot headless checks.
+- Advanced the roadmap to Framework Alpha and marked the parallel Content Studio MVP implemented and verified.
 - Hardened M-001 persistence with ordinal-canonical metadata serialization, strict JSON and partition rejection, pre-deserialization byte limits, full-state round-trip verification, and staged-write atomicity coverage.
 - Remediated Content Studio MVP acceptance blockers: the React UI now consumes `AuthoringWorkspace` domain validation/readiness diagnostics; complete deterministic exports include all records, manifests, and raster bytes with actual sizes and SHA-256 integrity in an explicitly versioned dependency-free bundle.
 - Added versioned draft validation, IndexedDB raster-byte persistence, safe object-URL lifecycle handling, atomic centralized raster ingestion limits/path checks, locale-independent canonical ordering, exact dependency pins, and executable acceptance coverage for export, integrity, correspondence, failure atomicity, persistence, and security cases.

@@ -2,8 +2,8 @@
 
 - Document ID: M-001
 - Title: Foundation Prototype
-- Version: 0.1
-- Status: In Progress
+- Version: 1.0
+- Status: Complete
 - Owner: Mythos Executive Development
 - Last Updated: July 2026
 
@@ -178,5 +178,8 @@ Failure to meet deterministic persistence or engine-separation requirements requ
 - [SYS-003 Time Framework](../Systems/SYS-003_Time_Framework.md)
 - [SYS-004 Region Framework](../Systems/SYS-004_Region_Framework.md)
 - [SYS-005 Character Framework](../Systems/SYS-005_Character_Framework.md)
+- [SYS-006 Save and Persistence Framework](../Systems/SYS-006_Save_and_Persistence_Framework.md)
+- [SYS-007 NPC Framework](../Systems/SYS-007_NPC_Framework.md)
+- [M-001 Completion Report](M-001_Foundation_Prototype_Report.md)
 - [SYS-006 Save and Persistence Framework](../Systems/SYS-006_Save_and_Persistence_Framework.md)
 - [SYS-007 NPC Framework](../Systems/SYS-007_NPC_Framework.md)

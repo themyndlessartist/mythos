@@ -6,6 +6,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Implemented SYS-014 Economy Framework with Entity-owned currency accounts, immutable atomic transfers, ledger-recomputed validation, deterministic queries, optional failure-safe events, and complete-world persistence.
 - Approved SYS-014 Economy Framework specification for Entity-owned currency accounts and immutable atomic transfers.
 - Implemented SYS-013 Organization Framework with generic profiles, stable Membership records, canonical role references, explicit lifecycle, atomic snapshots, optional failure-safe events, and complete-world persistence.
 - Approved SYS-013 Organization Framework specification for generic Organization profiles, memberships, and role references.

@@ -10,6 +10,7 @@ using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
 using Mythos.Framework.Organizations;
+using Mythos.Framework.Economy;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.UnitTests.Persistence;
@@ -47,6 +48,8 @@ public sealed class WorldPersistenceTests
             loaded.Value.Organizations.ExportSnapshot().Memberships!.Single().Id);
         Assert.Equal(fixture.World.Organizations.ExportSnapshot().Memberships!.Single().RoleIds,
             loaded.Value.Organizations.ExportSnapshot().Memberships!.Single().RoleIds);
+        Assert.Equal(fixture.World.Economy.ExportSnapshot().Accounts, loaded.Value.Economy.ExportSnapshot().Accounts);
+        Assert.Equal(fixture.World.Economy.ExportSnapshot().Transfers, loaded.Value.Economy.ExportSnapshot().Transfers);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
         Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
@@ -319,6 +322,28 @@ public sealed class WorldPersistenceTests
         Assert.Null(result.Value);
     }
 
+    [Fact]
+    public void BrokenEconomyOwnerReferenceRejectsCompleteWorldLoad()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var persistence = new WorldPersistence(storage);
+        Assert.True(persistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value.ToArray());
+        var original = "00000000-0000-0000-0000-000000000003"u8.ToArray();
+        var missing = "00000000-0000-0000-0000-000000000099"u8.ToArray();
+        var index = data["economy"].AsSpan().IndexOf(original);
+        Assert.True(index >= 0);
+        missing.CopyTo(data["economy"], index);
+        RewriteManifest(data, "economy");
+        Replace(storage, data);
+
+        var result = persistence.Load("slot", fixture.Context);
+
+        Assert.Equal(PersistenceErrorCodes.UnresolvedReference, result.Error?.Code);
+        Assert.Null(result.Value);
+    }
+
     private static (Fixture Fixture, InMemorySaveStorage Storage, WorldPersistence Persistence) Saved()
     {
         var fixture = Fixture.Create();
@@ -421,8 +446,15 @@ public sealed class WorldPersistenceTests
                 new WorldTimestamp(5), "fixture:organization").IsSuccess);
             Assert.True(organizations.AddMembership(organizationId, characterId, [new OrganizationRoleId("member")],
                 new WorldTimestamp(5), "fixture:membership").IsSuccess);
+            var economy = new EconomyFramework(entities, new FixedEconomyIdGenerator());
+            var characterAccount = economy.OpenAccount(characterId, new CurrencyId("fixture-unit"), 100,
+                new WorldTimestamp(5), "fixture:account").Value!;
+            var organizationAccount = economy.OpenAccount(organizationId, new CurrencyId("fixture-unit"), 0,
+                new WorldTimestamp(5), "fixture:account").Value!;
+            Assert.True(economy.Transfer(characterAccount.Id, organizationAccount.Id, 25,
+                new WorldTimestamp(5), "fixture:transfer", "fixture:economy").IsSuccess);
             return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history,
-                reputation, properties, organizations), new(calendar, references, references), characterId, regionId);
+                reputation, properties, organizations, economy), new(calendar, references, references), characterId, regionId);
         }
 
         private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
@@ -469,6 +501,13 @@ public sealed class WorldPersistenceTests
     private sealed class FixedMembershipIdGenerator : IMembershipIdGenerator
     {
         public MembershipId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000013"));
+    }
+
+    private sealed class FixedEconomyIdGenerator : IEconomyIdGenerator
+    {
+        private int next = 14;
+        public EconomyAccountId CreateAccountId() => new(new Guid(next++, 0, 0, new byte[8]));
+        public EconomyTransferId CreateTransferId() => new(new Guid(next++, 0, 0, new byte[8]));
     }
 
     private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage

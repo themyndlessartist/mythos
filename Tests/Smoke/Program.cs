@@ -10,6 +10,7 @@ using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
 using Mythos.Framework.Organizations;
+using Mythos.Framework.Economy;
 using Mythos.Framework.Time;
 
 if (FrameworkAssembly.Name != "Mythos.Framework")
@@ -137,8 +138,17 @@ if (!organization.IsSuccess || !membership.IsSuccess)
     Console.Error.WriteLine("Organization Framework smoke validation failed.");
     return 1;
 }
+var economy = new EconomyFramework(entities);
+var characterAccount = economy.OpenAccount(characterEntity.Id, new CurrencyId("fixture-unit"), 10, clock.Timestamp).Value!;
+var organizationAccount = economy.OpenAccount(organizationEntity.Id, new CurrencyId("fixture-unit"), 0, clock.Timestamp).Value!;
+var economyTransfer = economy.Transfer(characterAccount.Id, organizationAccount.Id, 4, clock.Timestamp);
+if (!economyTransfer.IsSuccess)
+{
+    Console.Error.WriteLine("Economy Framework smoke validation failed.");
+    return 1;
+}
 var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history,
-    reputation, properties, organizations);
+    reputation, properties, organizations, economy);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
@@ -149,7 +159,8 @@ if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != cl
     loaded.Value.History.Find(historyEntry.Value!.Id).Value!.RegionEntityId != child.Value.Id ||
     loaded.Value.Reputation.Find(reputationRecord.Value!.Id).Value!.Value != 0 ||
     loaded.Value.Properties.Find(characterEntity.Id).Value!.KindId != new PropertyKindId("fixture-asset") ||
-    loaded.Value.Organizations.FindActiveMembership(organizationEntity.Id, characterEntity.Id).Value!.Id != membership.Value!.Id)
+    loaded.Value.Organizations.FindActiveMembership(organizationEntity.Id, characterEntity.Id).Value!.Id != membership.Value!.Id ||
+    loaded.Value.Economy.FindAccount(organizationAccount.Id).Value!.Balance != 4)
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

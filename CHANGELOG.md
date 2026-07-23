@@ -6,6 +6,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- M-002 Framework Alpha milestone defining the dependency-ordered world-simulation implementation track.
 - Content Studio MVP vertical slice under `Tools/ContentStudio`: local-first React/TypeScript/Vite authoring workspaces for NPC records, character assets, layered maps, and deterministic package readiness/export.
 - DATA-001 through DATA-004 TypeScript models, structured validators, path/media security checks, canonical export helpers, replaceable draft persistence, undo/redo history, and contract tests.
 - Draft TOOL-001 Mythos Content Studio MVP specification and DATA-001 through DATA-004 engine-neutral authoring/export contracts.

@@ -48,7 +48,7 @@ Planned order:
 
 # 5. Phase 3 — World Simulation Specifications
 
-Status: Planned
+Status: In Progress
 
 Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prototype when dependencies permit.
 
@@ -82,6 +82,8 @@ Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype
 
 Status: In Progress
 
+Milestone: [M-002 Framework Alpha](../Milestones/M-002_Framework_Alpha.md)
+
 - Expand reusable systems
 - Add development and debugging tools
 - Validate modular title packages
@@ -93,7 +95,7 @@ Status: In Progress
 
 Status: MVP Implemented and Verified
 
-This track proceeds alongside M-001 without changing its scope, priority, or exit conditions.
+This track proceeds alongside framework milestones without changing their scope, priority, or exit conditions.
 
 - [TOOL-001 Mythos Content Studio MVP](../Tools/TOOL-001_Mythos_Content_Studio_MVP.md)
 - DATA-001 through DATA-004 authoring/export contracts

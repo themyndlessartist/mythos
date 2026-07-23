@@ -4,6 +4,7 @@ using Mythos.Framework.Entities;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
+using Mythos.Framework.Relationships;
 using Mythos.Framework.Time;
 
 if (FrameworkAssembly.Name != "Mythos.Framework")
@@ -81,12 +82,20 @@ if (!npc.IsSuccess || !npcUpdate.IsSuccess || npcUpdate.Value!.ProcessedTransiti
 
 var storage = new InMemorySaveStorage();
 var persistence = new WorldPersistence(storage);
-var world = new PersistentWorldState(entities, clock, regions, characters, npcs);
+var relationships = new RelationshipFramework(entities);
+var relationship = relationships.Create(characterEntity.Id, root.Value!.Id, new RelationshipKindId("fixture-link"), clock.Timestamp);
+if (!relationship.IsSuccess || !relationships.SetDimension(relationship.Value!.Id, new RelationshipDimensionId("trust"), 10, clock.Timestamp).IsSuccess)
+{
+    Console.Error.WriteLine("Relationship Framework smoke validation failed.");
+    return 1;
+}
+var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
     loaded.Value.Entities.Find(characterEntity.Id).Value!.RegionId != child.Value!.Id ||
-    loaded.Value.Npcs.Find(characterEntity.Id).Value!.CompletedTransitions != npcUpdate.Value.Profile.CompletedTransitions)
+    loaded.Value.Npcs.Find(characterEntity.Id).Value!.CompletedTransitions != npcUpdate.Value.Profile.CompletedTransitions ||
+    loaded.Value.Relationships.Find(relationship.Value.Id).Value!.Dimensions!["trust"] != 10)
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

@@ -1,6 +1,7 @@
 using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Npcs;
+using Mythos.Framework.Relationships;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Time;
 
@@ -17,7 +18,7 @@ public static class PersistenceErrorCodes
     public const string SizeLimitExceeded = "persistence.size_limit_exceeded";
 }
 
-/// <summary>M-001 defensive load bounds; replaceable with a future approved storage policy.</summary>
+/// <summary>M-002 defensive load bounds; replaceable with a future approved storage policy.</summary>
 public static class PersistenceLimits
 {
     public const int ManifestBytes = 64 * 1024;
@@ -60,13 +61,14 @@ public sealed record EntityDomainSnapshot(int Version, IReadOnlyList<EntitySnaps
 public sealed class PersistentWorldState
 {
     public PersistentWorldState(EntityRegistry entities, WorldClock clock, RegionFramework regions,
-        CharacterRegistry characters, NpcFramework npcs)
+        CharacterRegistry characters, NpcFramework npcs, RelationshipFramework relationships)
     {
         Entities = entities ?? throw new ArgumentNullException(nameof(entities));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
         Regions = regions ?? throw new ArgumentNullException(nameof(regions));
         Characters = characters ?? throw new ArgumentNullException(nameof(characters));
         Npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
+        Relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
     }
 
     public EntityRegistry Entities { get; }
@@ -74,6 +76,7 @@ public sealed class PersistentWorldState
     public RegionFramework Regions { get; }
     public CharacterRegistry Characters { get; }
     public NpcFramework Npcs { get; }
+    public RelationshipFramework Relationships { get; }
 }
 
 public sealed record PersistenceLoadContext(

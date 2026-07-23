@@ -4,6 +4,7 @@ using Mythos.Framework.Characters;
 using Mythos.Framework.Entities;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Regions;
+using Mythos.Framework.Relationships;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.Persistence;
@@ -19,7 +20,9 @@ internal static class PersistenceJson
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         };
         options.Converters.Add(new OrdinalStringDictionaryConverter());
+        options.Converters.Add(new OrdinalIntegerDictionaryConverter());
         options.Converters.Add(new EntityIdConverter());
+        options.Converters.Add(new RelationshipIdConverter());
         options.Converters.Add(new StringValueConverter<EntityCategory>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<EntityTag>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ComponentTypeId>(v => new(v), v => v.Value));
@@ -34,6 +37,7 @@ internal static class PersistenceJson
         options.Converters.Add(new StringValueConverter<NpcPurposeId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<NpcScheduleId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<NpcScheduleStateId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<RelationshipKindId>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldTimestamp>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldDuration>(v => new(v), v => v.Value));
         options.Converters.Add(new TimeScaleConverter());
@@ -57,6 +61,15 @@ internal static class PersistenceJson
         public override EntityId Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
             EntityId.TryParse(reader.GetString(), out var value) ? value : throw new JsonException("Entity ID is invalid.");
         public override void Write(Utf8JsonWriter writer, EntityId value, JsonSerializerOptions options) => writer.WriteStringValue(value.ToString());
+    }
+
+    private sealed class RelationshipIdConverter : JsonConverter<RelationshipId>
+    {
+        public override RelationshipId Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
+                ? new RelationshipId(value) : throw new JsonException("Relationship ID is invalid.");
+        public override void Write(Utf8JsonWriter writer, RelationshipId value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.ToString());
     }
 
     private sealed class TimeScaleConverter : JsonConverter<TimeScale>
@@ -100,6 +113,30 @@ internal static class PersistenceJson
         {
             writer.WriteStartObject();
             foreach (var item in value.OrderBy(item => item.Key, StringComparer.Ordinal)) writer.WriteString(item.Key, item.Value);
+            writer.WriteEndObject();
+        }
+    }
+
+    private sealed class OrdinalIntegerDictionaryConverter : JsonConverter<IReadOnlyDictionary<string, int>>
+    {
+        public override IReadOnlyDictionary<string, int> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException("Dimensions must be an object.");
+            var values = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                if (reader.TokenType != JsonTokenType.PropertyName) throw new JsonException("Dimension property is malformed.");
+                var key = reader.GetString()!;
+                if (!reader.Read() || reader.TokenType != JsonTokenType.Number || !reader.TryGetInt32(out var value) || !values.TryAdd(key, value))
+                    throw new JsonException("Dimension values must be integers with unique keys.");
+            }
+            return values;
+        }
+
+        public override void Write(Utf8JsonWriter writer, IReadOnlyDictionary<string, int> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            foreach (var item in value.OrderBy(item => item.Key, StringComparer.Ordinal)) writer.WriteNumber(item.Key, item.Value);
             writer.WriteEndObject();
         }
     }

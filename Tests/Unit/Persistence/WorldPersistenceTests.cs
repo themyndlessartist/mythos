@@ -4,6 +4,7 @@ using Mythos.Framework.Entities;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
+using Mythos.Framework.Relationships;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.UnitTests.Persistence;
@@ -26,6 +27,10 @@ public sealed class WorldPersistenceTests
         Assert.Equal(fixture.RegionId, loaded.Value.Entities.Find(fixture.CharacterId).Value!.RegionId);
         Assert.Equal(fixture.World.Characters.ExportSnapshot().Profiles!, loaded.Value.Characters.ExportSnapshot().Profiles!);
         Assert.Equal(fixture.World.Npcs.ExportSnapshot().Profiles!, loaded.Value.Npcs.ExportSnapshot().Profiles!);
+        Assert.Equal(fixture.World.Relationships.ExportSnapshot().Relationships!.Single().Id,
+            loaded.Value.Relationships.ExportSnapshot().Relationships!.Single().Id);
+        Assert.Equal(fixture.World.Relationships.ExportSnapshot().Relationships!.Single().Dimensions,
+            loaded.Value.Relationships.ExportSnapshot().Relationships!.Single().Dimensions);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
         Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
@@ -166,6 +171,28 @@ public sealed class WorldPersistenceTests
         Assert.True(fixture.World.Npcs.ValidateReferences().IsSuccess);
     }
 
+    [Fact]
+    public void BrokenRelationshipParticipantRejectsCompleteWorldLoad()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var persistence = new WorldPersistence(storage);
+        Assert.True(persistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value.ToArray());
+        var originalTarget = "00000000-0000-0000-0000-000000000004"u8.ToArray();
+        var missingTarget = "00000000-0000-0000-0000-000000000099"u8.ToArray();
+        var index = data["relationships"].AsSpan().IndexOf(originalTarget);
+        Assert.True(index >= 0);
+        missingTarget.CopyTo(data["relationships"], index);
+        RewriteManifest(data, "relationships");
+        Replace(storage, data);
+
+        var result = persistence.Load("slot", fixture.Context);
+
+        Assert.Equal(PersistenceErrorCodes.UnresolvedReference, result.Error?.Code);
+        Assert.Null(result.Value);
+    }
+
     private static (Fixture Fixture, InMemorySaveStorage Storage, WorldPersistence Persistence) Saved()
     {
         var fixture = Fixture.Create();
@@ -239,7 +266,14 @@ public sealed class WorldPersistenceTests
                 "fixture", metadata, new WorldDuration(5)).IsSuccess);
             Assert.True(clock.SimulationLayers.Register(new SimulationLayerId("abstract-layer"), new WorldDuration(3), clock.Timestamp).IsSuccess);
             Assert.True(clock.Pause(new PauseReason("fixture-pause")).IsSuccess);
-            return new Fixture(new(entities, clock, regions, characters, npcs), new(calendar, references, references), characterId, regionId);
+            var relationships = new RelationshipFramework(entities, new FixedRelationshipIdGenerator());
+            var relationship = relationships.Create(characterId, ownerId, new RelationshipKindId("known-contact"), new WorldTimestamp(3), "fixture:event").Value!;
+            var dimensions = reverseMetadataInsertion ? new[] { "zeta", "alpha" } : new[] { "alpha", "zeta" };
+            Assert.True(relationships.SetDimension(relationship.Id, new RelationshipDimensionId(dimensions[0]),
+                dimensions[0] == "alpha" ? 25 : 50, new WorldTimestamp(4)).IsSuccess);
+            Assert.True(relationships.SetDimension(relationship.Id, new RelationshipDimensionId(dimensions[1]),
+                dimensions[1] == "alpha" ? 25 : 50, new WorldTimestamp(5)).IsSuccess);
+            return new Fixture(new(entities, clock, regions, characters, npcs, relationships), new(calendar, references, references), characterId, regionId);
         }
 
         private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
@@ -260,6 +294,11 @@ public sealed class WorldPersistenceTests
         public bool IsKnownLifeStage(LifeStageId lifeStageId) => valid && lifeStageId == new LifeStageId("established");
         public bool IsKnownPurpose(NpcPurposeId purposeId) => valid && purposeId == Purpose;
         public NpcScheduleDefinition? FindSchedule(NpcScheduleId scheduleId) => valid && scheduleId == Schedule.Id ? Schedule : null;
+    }
+
+    private sealed class FixedRelationshipIdGenerator : IRelationshipIdGenerator
+    {
+        public RelationshipId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000007"));
     }
 
     private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage

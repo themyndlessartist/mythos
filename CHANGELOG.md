@@ -6,6 +6,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Implemented SYS-008 Relationship Framework with directed Entity relationships, bounded typed dimensions, deterministic queries, atomic snapshots, optional failure-safe event publication, and complete-world persistence.
 - Approved SYS-008 Relationship Framework specification for directed, persistent, setting-agnostic entity relationships.
 - M-002 Framework Alpha milestone defining the dependency-ordered world-simulation implementation track.
 - Content Studio MVP vertical slice under `Tools/ContentStudio`: local-first React/TypeScript/Vite authoring workspaces for NPC records, character assets, layered maps, and deterministic package readiness/export.

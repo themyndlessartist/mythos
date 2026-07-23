@@ -8,6 +8,7 @@ using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
+using Mythos.Framework.Properties;
 using Mythos.Framework.Time;
 
 if (FrameworkAssembly.Name != "Mythos.Framework")
@@ -118,7 +119,14 @@ if (!reputationRecord.IsSuccess)
     Console.Error.WriteLine("Reputation Framework smoke validation failed.");
     return 1;
 }
-var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history, reputation);
+var properties = new PropertyFramework(entities);
+var property = properties.Register(characterEntity.Id, new PropertyKindId("fixture-asset"), clock.Timestamp);
+if (!property.IsSuccess)
+{
+    Console.Error.WriteLine("Property Framework smoke validation failed.");
+    return 1;
+}
+var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history, reputation, properties);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
@@ -127,7 +135,8 @@ if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != cl
     loaded.Value.Relationships.Find(relationship.Value.Id).Value!.Dimensions!["trust"] != 10 ||
     !loaded.Value.Information.IsAuthoritative(proposition.Id) ||
     loaded.Value.History.Find(historyEntry.Value!.Id).Value!.RegionEntityId != child.Value.Id ||
-    loaded.Value.Reputation.Find(reputationRecord.Value!.Id).Value!.Value != 0)
+    loaded.Value.Reputation.Find(reputationRecord.Value!.Id).Value!.Value != 0 ||
+    loaded.Value.Properties.Find(characterEntity.Id).Value!.KindId != new PropertyKindId("fixture-asset"))
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

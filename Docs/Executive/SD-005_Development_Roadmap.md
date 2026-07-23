@@ -54,7 +54,7 @@ Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prot
 
 - SYS-008 Relationship Framework — Implemented
 - SYS-011 Reputation Framework — Implemented
-- SYS-012 Property Framework — Specified
+- SYS-012 Property Framework — Implemented
 - Economy
 - Organizations
 - SYS-009 Information and Knowledge Framework — Implemented

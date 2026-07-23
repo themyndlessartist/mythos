@@ -8,6 +8,7 @@ using Mythos.Framework.Npcs;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
 using Mythos.Framework.Reputation;
+using Mythos.Framework.Properties;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.Persistence;
@@ -49,6 +50,7 @@ internal static class PersistenceJson
         options.Converters.Add(new StringValueConverter<HistoryTypeId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ReputationAudienceTypeId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ReputationDimensionId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<PropertyKindId>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldTimestamp>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldDuration>(v => new(v), v => v.Value));
         options.Converters.Add(new TimeScaleConverter());

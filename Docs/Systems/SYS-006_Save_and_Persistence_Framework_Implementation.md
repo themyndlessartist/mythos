@@ -23,6 +23,8 @@ The World History increment adds a required History partition restored after Ent
 
 The Reputation increment adds a required Reputation partition restored after Entity identity and advances the prototype marker to `m-002.3`. Audience-scoped values, lifecycle, timestamps, provenance, and Entity references remain deterministic and integrity checked.
 
+The Property increment adds a required Property-profile partition restored after Entities and Regions and advances the prototype marker to `m-002.4`. Sole ownership and Region links remain authoritative in the Entity partition; Property profiles add only classification, lifecycle, timestamps, and provenance.
+
 Save validates cross-domain references, serializes canonical domain projections in fixed order, stages every partition through `ISaveWriteTransaction`, and exposes the replacement only after commit. Load verifies the exact physical partition set and byte limits before hashing or deserialization, then verifies the manifest, required declarations, versions, and checksums before constructing an entirely fresh candidate in Entity, Time, Region, Character, and NPC dependency order. The candidate is returned only after final cross-domain validation; callers retain their prior world on every failure.
 
 Failures use stable `persistence.*` codes for corrupt data, missing partitions, unsupported versions, malformed or null data, unresolved references, and storage/commit failures. Persistent IDs are restored exactly; the loader never generates replacements.

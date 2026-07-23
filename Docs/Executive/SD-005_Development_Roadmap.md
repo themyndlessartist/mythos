@@ -57,7 +57,7 @@ Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prot
 - Economy
 - Organizations
 - Property
-- Information
+- SYS-009 Information and Knowledge Framework — Specified
 - History
 - Dynamic events
 

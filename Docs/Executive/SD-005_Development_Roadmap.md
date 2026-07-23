@@ -48,7 +48,7 @@ Planned order:
 
 # 5. Phase 3 — World Simulation Specifications
 
-Status: In Progress
+Status: Complete
 
 Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prototype when dependencies permit.
 
@@ -80,14 +80,16 @@ Milestone: [M-001 Foundation Prototype](../Milestones/M-001_Foundation_Prototype
 
 # 7. Phase 5 — Framework Alpha
 
-Status: In Progress
+Status: Complete
 
 Milestone: [M-002 Framework Alpha](../Milestones/M-002_Framework_Alpha.md)
 
-- Expand reusable systems
-- Add development and debugging tools
-- Validate modular title packages
-- Performance and simulation testing
+Completion Report: [M-002 Framework Alpha Report](../Milestones/M-002_Framework_Alpha_Report.md)
+
+- Reusable world-simulation domains implemented
+- Domain diagnostics and canonical verification integrated
+- Modular title-package validation deferred to Phase 6 because no title package is approved
+- Representative performance testing deferred to Phase 6 title workloads
 
 --------------------------------------------
 

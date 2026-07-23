@@ -42,6 +42,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Changed
 
+- Completed M-002 Framework Alpha after architecture review and canonical verification of 223 unit tests, smoke coverage, and Godot headless checks.
 - Completed M-001 Foundation Prototype after architecture review and canonical verification of 150 unit tests, smoke coverage, and Godot headless checks.
 - Advanced the roadmap to Framework Alpha and marked the parallel Content Studio MVP implemented and verified.
 - Hardened M-001 persistence with ordinal-canonical metadata serialization, strict JSON and partition rejection, pre-deserialization byte limits, full-state round-trip verification, and staged-write atomicity coverage.

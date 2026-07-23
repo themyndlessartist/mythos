@@ -7,6 +7,7 @@ using Mythos.Framework.Npcs;
 using Mythos.Framework.Persistence;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
+using Mythos.Framework.Reputation;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.UnitTests.Persistence;
@@ -38,6 +39,7 @@ public sealed class WorldPersistenceTests
         Assert.Equal(fixture.World.Information.ExportSnapshot().Awareness, loaded.Value.Information.ExportSnapshot().Awareness);
         Assert.Equal(fixture.World.History.ExportSnapshot().Entries!.Single().Id,
             loaded.Value.History.ExportSnapshot().Entries!.Single().Id);
+        Assert.Equal(fixture.World.Reputation.ExportSnapshot().Records, loaded.Value.Reputation.ExportSnapshot().Records);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
         Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
@@ -244,6 +246,28 @@ public sealed class WorldPersistenceTests
         Assert.Null(result.Value);
     }
 
+    [Fact]
+    public void BrokenReputationAudienceReferenceRejectsCompleteWorldLoad()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var persistence = new WorldPersistence(storage);
+        Assert.True(persistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value.ToArray());
+        var original = "00000000-0000-0000-0000-000000000002"u8.ToArray();
+        var missing = "00000000-0000-0000-0000-000000000099"u8.ToArray();
+        var index = data["reputation"].AsSpan().IndexOf(original);
+        Assert.True(index >= 0);
+        missing.CopyTo(data["reputation"], index);
+        RewriteManifest(data, "reputation");
+        Replace(storage, data);
+
+        var result = persistence.Load("slot", fixture.Context);
+
+        Assert.Equal(PersistenceErrorCodes.UnresolvedReference, result.Error?.Code);
+        Assert.Null(result.Value);
+    }
+
     private static (Fixture Fixture, InMemorySaveStorage Storage, WorldPersistence Persistence) Saved()
     {
         var fixture = Fixture.Create();
@@ -333,7 +357,10 @@ public sealed class WorldPersistenceTests
             var history = new WorldHistoryFramework(entities, regions, new FixedHistoryIdGenerator());
             Assert.True(history.Record(new HistoryTypeId("fixture-created"), new WorldTimestamp(5),
                 [characterId, ownerId], regionId, 300, metadata, "event:fixture-history", "fixture:history").IsSuccess);
-            return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history), new(calendar, references, references), characterId, regionId);
+            var reputation = new ReputationFramework(entities, new FixedReputationIdGenerator());
+            Assert.True(reputation.Create(characterId, new ReputationAudienceTypeId("regional"), regionId,
+                new ReputationDimensionId("standing"), 125, new WorldTimestamp(5), "fixture:reputation").IsSuccess);
+            return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history, reputation), new(calendar, references, references), characterId, regionId);
         }
 
         private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
@@ -370,6 +397,11 @@ public sealed class WorldPersistenceTests
     private sealed class FixedHistoryIdGenerator : IHistoryEntryIdGenerator
     {
         public HistoryEntryId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000010"));
+    }
+
+    private sealed class FixedReputationIdGenerator : IReputationIdGenerator
+    {
+        public ReputationId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000011"));
     }
 
     private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage

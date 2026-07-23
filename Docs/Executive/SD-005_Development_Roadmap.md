@@ -53,7 +53,7 @@ Status: In Progress
 Phase 3 may proceed after or alongside completion of the Phase 4 Foundation Prototype when dependencies permit.
 
 - SYS-008 Relationship Framework — Implemented
-- SYS-011 Reputation Framework — Specified
+- SYS-011 Reputation Framework — Implemented
 - Economy
 - Organizations
 - Property

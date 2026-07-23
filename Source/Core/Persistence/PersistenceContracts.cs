@@ -4,6 +4,7 @@ using Mythos.Framework.Information;
 using Mythos.Framework.History;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Relationships;
+using Mythos.Framework.Reputation;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Time;
 
@@ -64,7 +65,7 @@ public sealed class PersistentWorldState
 {
     public PersistentWorldState(EntityRegistry entities, WorldClock clock, RegionFramework regions,
         CharacterRegistry characters, NpcFramework npcs, RelationshipFramework relationships, InformationFramework information,
-        WorldHistoryFramework history)
+        WorldHistoryFramework history, ReputationFramework reputation)
     {
         Entities = entities ?? throw new ArgumentNullException(nameof(entities));
         Clock = clock ?? throw new ArgumentNullException(nameof(clock));
@@ -74,6 +75,7 @@ public sealed class PersistentWorldState
         Relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
         Information = information ?? throw new ArgumentNullException(nameof(information));
         History = history ?? throw new ArgumentNullException(nameof(history));
+        Reputation = reputation ?? throw new ArgumentNullException(nameof(reputation));
     }
 
     public EntityRegistry Entities { get; }
@@ -84,6 +86,7 @@ public sealed class PersistentWorldState
     public RelationshipFramework Relationships { get; }
     public InformationFramework Information { get; }
     public WorldHistoryFramework History { get; }
+    public ReputationFramework Reputation { get; }
 }
 
 public sealed record PersistenceLoadContext(

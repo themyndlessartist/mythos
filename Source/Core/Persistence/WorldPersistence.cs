@@ -7,6 +7,7 @@ using Mythos.Framework.History;
 using Mythos.Framework.Npcs;
 using Mythos.Framework.Regions;
 using Mythos.Framework.Relationships;
+using Mythos.Framework.Reputation;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.Persistence;
@@ -15,9 +16,9 @@ namespace Mythos.Framework.Persistence;
 public sealed class WorldPersistence(ISaveStorage storage)
 {
     private const string ManifestId = "manifest";
-    private const string FrameworkVersion = "m-002.2";
+    private const string FrameworkVersion = "m-002.3";
     private static readonly HashSet<string> PhysicalPartitionIds =
-        new([ManifestId, "characters", "entities", "history", "information", "npcs", "regions", "relationships", "time"], StringComparer.Ordinal);
+        new([ManifestId, "characters", "entities", "history", "information", "npcs", "regions", "relationships", "reputation", "time"], StringComparer.Ordinal);
     private static readonly JsonSerializerOptions JsonOptions = PersistenceJson.CreateOptions();
 
     public PersistenceResult Save(string slotId, string worldId, PersistentWorldState world)
@@ -35,6 +36,7 @@ public sealed class WorldPersistence(ISaveStorage storage)
             ["npcs"] = Serialize(world.Npcs.ExportSnapshot()),
             ["regions"] = Serialize(world.Regions.ExportSnapshot()),
             ["relationships"] = Serialize(world.Relationships.ExportSnapshot()),
+            ["reputation"] = Serialize(world.Reputation.ExportSnapshot()),
             ["time"] = Serialize(world.Clock.CreateSnapshot()),
         };
         var descriptors = data.Select(item => new SavePartitionDescriptor(item.Key, DomainVersion(item.Key), Hash(item.Value))).ToArray();
@@ -82,7 +84,7 @@ public sealed class WorldPersistence(ISaveStorage storage)
             return PersistenceResult<PersistentWorldState>.Failure(PersistenceErrorCodes.UnsupportedVersion, "Framework save version is unsupported.", ManifestId);
         if (!Valid(manifest.WorldId) || manifest.Partitions is null)
             return PersistenceResult<PersistentWorldState>.Failure(PersistenceErrorCodes.InvalidData, "Save manifest is malformed.", ManifestId);
-        var required = new HashSet<string>(["characters", "entities", "history", "information", "npcs", "regions", "relationships", "time"], StringComparer.Ordinal);
+        var required = new HashSet<string>(["characters", "entities", "history", "information", "npcs", "regions", "relationships", "reputation", "time"], StringComparer.Ordinal);
         if (manifest.Partitions.Count != required.Count || manifest.Partitions.Any(p => p is null || !Valid(p.Id) || !Valid(p.Sha256)) ||
             !required.SetEquals(manifest.Partitions.Select(p => p.Id)))
             return PersistenceResult<PersistentWorldState>.Failure(PersistenceErrorCodes.MissingPartition, "Save manifest does not declare the complete required partition set.", ManifestId);
@@ -136,6 +138,13 @@ public sealed class WorldPersistence(ISaveStorage storage)
             if (!historyRestore.IsSuccess) return DomainFailure<PersistentWorldState>(historyRestore.Error!.Code,
                 historyRestore.Error.Message, "history");
 
+            var reputation = new ReputationFramework(entities);
+            var reputationData = Get<ReputationFrameworkSnapshot>(partitions, "reputation");
+            if (!reputationData.IsSuccess) return Fail<PersistentWorldState>(reputationData.Error!);
+            var reputationRestore = reputation.RestoreSnapshot(reputationData.Value);
+            if (!reputationRestore.IsSuccess) return DomainFailure<PersistentWorldState>(reputationRestore.Error!.Code,
+                reputationRestore.Error.Message, "reputation");
+
             var characters = new CharacterRegistry(entities, context.CharacterReferences);
             var characterData = Get<CharacterRegistrySnapshot>(partitions, "characters");
             if (!characterData.IsSuccess) return Fail<PersistentWorldState>(characterData.Error!);
@@ -148,7 +157,7 @@ public sealed class WorldPersistence(ISaveStorage storage)
             var npcRestore = npcs.RestoreSnapshot(npcData.Value);
             if (!npcRestore.IsSuccess) return DomainFailure<PersistentWorldState>(npcRestore.Error!.Code, npcRestore.Error.Message, "npcs");
 
-            var candidate = new PersistentWorldState(entities, clock.Value!, regions, characters, npcs, relationships, information, history);
+            var candidate = new PersistentWorldState(entities, clock.Value!, regions, characters, npcs, relationships, information, history, reputation);
             var valid = Validate(candidate);
             return valid.IsSuccess ? PersistenceResult<PersistentWorldState>.Success(candidate) : Fail<PersistentWorldState>(valid.Error!);
         }
@@ -197,6 +206,8 @@ public sealed class WorldPersistence(ISaveStorage storage)
         if (!information.IsSuccess) return DomainFailure(information.Error!.Message, "information");
         var history = world.History.ValidateReferences();
         if (!history.IsSuccess) return DomainFailure(history.Error!.Message, "history");
+        var reputation = world.Reputation.ValidateReferences();
+        if (!reputation.IsSuccess) return DomainFailure(reputation.Error!.Message, "reputation");
         return PersistenceResult.Success();
     }
 
@@ -225,6 +236,7 @@ public sealed class WorldPersistence(ISaveStorage storage)
         "relationships" => RelationshipFrameworkSnapshot.CurrentVersion,
         "information" => InformationFrameworkSnapshot.CurrentVersion,
         "history" => WorldHistorySnapshot.CurrentVersion,
+        "reputation" => ReputationFrameworkSnapshot.CurrentVersion,
         _ => -1,
     };
     private static string Hash(byte[] value) => Convert.ToHexStringLower(SHA256.HashData(value));

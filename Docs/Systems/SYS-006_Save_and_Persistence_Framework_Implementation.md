@@ -15,7 +15,7 @@
 
 The M-001 proof coordinates versioned Entity, Time, Region, Character, and NPC snapshots behind `WorldPersistence`. A versioned manifest declares the complete partition set, domain versions, stable world ID, framework prototype version, and SHA-256 integrity digest for each partition. The Event Framework has no approved durable queue or history state in M-001, so no Event partition is invented.
 
-Save validates cross-domain references, serializes canonical domain projections in fixed order, stages every partition through `ISaveWriteTransaction`, and exposes the replacement only after commit. Load verifies the manifest, required partitions, versions, and checksums before constructing an entirely fresh candidate in Entity, Time, Region, Character, and NPC dependency order. The candidate is returned only after final cross-domain validation; callers retain their prior world on every failure.
+Save validates cross-domain references, serializes canonical domain projections in fixed order, stages every partition through `ISaveWriteTransaction`, and exposes the replacement only after commit. Load verifies the exact physical partition set and byte limits before hashing or deserialization, then verifies the manifest, required declarations, versions, and checksums before constructing an entirely fresh candidate in Entity, Time, Region, Character, and NPC dependency order. The candidate is returned only after final cross-domain validation; callers retain their prior world on every failure.
 
 Failures use stable `persistence.*` codes for corrupt data, missing partitions, unsupported versions, malformed or null data, unresolved references, and storage/commit failures. Persistent IDs are restored exactly; the loader never generates replacements.
 
@@ -23,15 +23,16 @@ Failures use stable `persistence.*` codes for corrupt data, missing partitions, 
 
 These reversible M-001 mechanisms do not select the final save format or storage technology:
 
-- Compact UTF-8 JSON is produced by `System.Text.Json` with explicit converters for framework value types and deterministic domain ordering.
+- Compact UTF-8 JSON is produced by `System.Text.Json` with explicit converters for framework value types, ordinal-canonical key ordering for every persisted metadata dictionary, deterministic domain ordering, and rejection of unmapped JSON members.
 - `System.Security.Cryptography.SHA256` provides partition corruption detection. It is integrity metadata, not security or authentication.
 - `InMemorySaveStorage` proves a narrow transaction boundary by copying staged bytes into a slot only on successful commit.
 - Manifest version 1 and domain partition names are milestone-local contracts. Migration execution, backup rotation, slot presentation metadata, and production file layout remain deferred.
 - The caller supplies the approved calendar and externally owned Character/NPC definition providers during load; content/configuration persistence is outside this slice.
+- Defensive M-001 load limits are 65,536 bytes for the manifest, 1,048,576 bytes for each domain partition, and 2,097,152 bytes for the complete physical save. Limits are checked against raw bytes before hashing or JSON parsing and are prototype-local rather than production capacity claims.
 
 ## Boundaries and Failure Behavior
 
-The proof adds no UI, file-system adapter, cloud synchronization, compression, encryption, mods, database, gameplay, or third-party runtime dependency. It does not persist transient Event dispatch diagnostics. Invalid manifests, missing or extra required declarations, checksum mismatches, malformed snapshots, incompatible versions, invalid identifiers, and broken cross-domain links fail without exposing a partial candidate or overwriting a prior committed save.
+The proof adds no UI, file-system adapter, cloud synchronization, compression, encryption, mods, database, gameplay, or third-party runtime dependency. It does not persist transient Event dispatch diagnostics. Invalid manifests, missing or undeclared physical partitions, missing or extra required declarations, unknown JSON properties, oversized data, checksum mismatches, malformed snapshots, incompatible versions, invalid identifiers, and broken cross-domain links fail without exposing a partial candidate or overwriting a prior committed save.
 
 ## Known Limitations and Risks
 
@@ -43,4 +44,4 @@ The proof adds no UI, file-system adapter, cloud synchronization, compression, e
 
 ## Verification
 
-Automated tests cover complete-world round trip, stable IDs and references, deterministic bytes, manifest incompatibility, checksum corruption, missing/partial partitions, null data, unresolved references, failed-commit preservation, load atomicity, and smoke integration. Repository verification uses `./Scripts/build.sh`, including Release build, all unit tests, smoke tests, and both Godot headless checks.
+Automated tests cover full non-default domain snapshot round trips, stable IDs and references, reverse-insertion deterministic bytes, manifest incompatibility, checksum corruption, missing and undeclared physical partitions, unknown JSON properties, per-partition and aggregate byte limits, null data, unresolved references, failed-commit preservation, staged-write failure without commit, load atomicity, and smoke integration. Repository verification uses `./Scripts/build.sh`, including Release build, all unit tests, smoke tests, and both Godot headless checks.

@@ -25,6 +25,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Changed
 
+- Hardened M-001 persistence with ordinal-canonical metadata serialization, strict JSON and partition rejection, pre-deserialization byte limits, full-state round-trip verification, and staged-write atomicity coverage.
 - Scoped NPC operational validation to the relevant Character profile and Region assignment while retaining single-pass global validation at explicit world-integrity boundaries.
 - Hardened Entity snapshot restoration against undefined lifecycle values, uninitialized identifiers, null collections, invalid timestamp/state combinations, and malformed references using structured failures.
 - Made Entity snapshot collections defensive read-only projections.

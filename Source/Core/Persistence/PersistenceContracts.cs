@@ -14,6 +14,15 @@ public static class PersistenceErrorCodes
     public const string InvalidData = "persistence.invalid_data";
     public const string UnresolvedReference = "persistence.unresolved_reference";
     public const string StorageFailure = "persistence.storage_failure";
+    public const string SizeLimitExceeded = "persistence.size_limit_exceeded";
+}
+
+/// <summary>M-001 defensive load bounds; replaceable with a future approved storage policy.</summary>
+public static class PersistenceLimits
+{
+    public const int ManifestBytes = 64 * 1024;
+    public const int DomainPartitionBytes = 1024 * 1024;
+    public const long AggregateBytes = 2L * 1024 * 1024;
 }
 
 public sealed record PersistenceError(string Code, string Message, string? Partition = null);

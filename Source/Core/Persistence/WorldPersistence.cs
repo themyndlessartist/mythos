@@ -13,6 +13,8 @@ public sealed class WorldPersistence(ISaveStorage storage)
 {
     private const string ManifestId = "manifest";
     private const string FrameworkVersion = "m-001.1";
+    private static readonly HashSet<string> PhysicalPartitionIds =
+        new([ManifestId, "characters", "entities", "npcs", "regions", "time"], StringComparer.Ordinal);
     private static readonly JsonSerializerOptions JsonOptions = PersistenceJson.CreateOptions();
 
     public PersistenceResult Save(string slotId, string worldId, PersistentWorldState world)
@@ -47,6 +49,23 @@ public sealed class WorldPersistence(ISaveStorage storage)
         var read = storage.Read(slotId);
         if (!read.IsSuccess) return PersistenceResult<PersistentWorldState>.Failure(read.Error!.Code, read.Error.Message, read.Error.Partition);
         var partitions = read.Value!;
+        var missingPhysical = PhysicalPartitionIds.FirstOrDefault(id => !partitions.ContainsKey(id));
+        if (missingPhysical is not null) return Missing<PersistentWorldState>(missingPhysical);
+        if (partitions.Keys.Any(id => !PhysicalPartitionIds.Contains(id)))
+            return PersistenceResult<PersistentWorldState>.Failure(PersistenceErrorCodes.InvalidData,
+                "Save contains an undeclared physical partition.");
+        long aggregateBytes = 0;
+        foreach (var partition in partitions)
+        {
+            var limit = partition.Key == ManifestId ? PersistenceLimits.ManifestBytes : PersistenceLimits.DomainPartitionBytes;
+            if (partition.Value is null || partition.Value.LongLength > limit)
+                return PersistenceResult<PersistentWorldState>.Failure(PersistenceErrorCodes.SizeLimitExceeded,
+                    $"Partition '{partition.Key}' exceeds the M-001 load limit of {limit} bytes.", partition.Key);
+            aggregateBytes += partition.Value.LongLength;
+        }
+        if (aggregateBytes > PersistenceLimits.AggregateBytes)
+            return PersistenceResult<PersistentWorldState>.Failure(PersistenceErrorCodes.SizeLimitExceeded,
+                $"Save exceeds the M-001 aggregate load limit of {PersistenceLimits.AggregateBytes} bytes.");
         if (!partitions.TryGetValue(ManifestId, out var manifestBytes)) return Missing<PersistentWorldState>(ManifestId);
         var manifestResult = Deserialize<SaveManifest>(manifestBytes, ManifestId);
         if (!manifestResult.IsSuccess) return Fail<PersistentWorldState>(manifestResult.Error!);

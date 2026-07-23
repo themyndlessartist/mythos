@@ -22,27 +22,71 @@ public sealed class WorldPersistenceTests
 
         Assert.True(loaded.IsSuccess, loaded.Error?.Message);
         Assert.Equal(fixture.CharacterId, loaded.Value!.Characters.QueryAll().Single().EntityId);
-        Assert.Equal(7, loaded.Value.Clock.Timestamp.Value);
         Assert.Single(loaded.Value.Clock.Scheduler.ExportSnapshots());
         Assert.Equal(fixture.RegionId, loaded.Value.Entities.Find(fixture.CharacterId).Value!.RegionId);
         Assert.Equal(fixture.World.Characters.ExportSnapshot().Profiles!, loaded.Value.Characters.ExportSnapshot().Profiles!);
         Assert.Equal(fixture.World.Npcs.ExportSnapshot().Profiles!, loaded.Value.Npcs.ExportSnapshot().Profiles!);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
+        Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
+        var before = storage.Read("slot").Value!;
+        var after = storage.Read("roundtrip").Value!;
+        foreach (var key in before.Keys) Assert.Equal(before[key], after[key]);
     }
 
     [Fact]
     public void SameWorldProducesDeterministicPartitionBytes()
     {
         var fixture = Fixture.Create();
+        var reverseFixture = Fixture.Create(reverseMetadataInsertion: true);
         var storage = new InMemorySaveStorage();
         var persistence = new WorldPersistence(storage);
         Assert.True(persistence.Save("a", "neutral-world", fixture.World).IsSuccess);
-        Assert.True(persistence.Save("b", "neutral-world", fixture.World).IsSuccess);
+        Assert.True(persistence.Save("b", "neutral-world", reverseFixture.World).IsSuccess);
         var first = storage.Read("a").Value!;
         var second = storage.Read("b").Value!;
         Assert.Equal(first.Keys.Order(), second.Keys.Order());
         foreach (var key in first.Keys) Assert.Equal(first[key], second[key]);
+    }
+
+    [Fact]
+    public void OversizedPartitionAndAggregateAreRejectedBeforeIntegrityWork()
+    {
+        var (fixture, storage, persistence) = Saved();
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value);
+        data["characters"] = new byte[PersistenceLimits.DomainPartitionBytes + 1];
+        Replace(storage, data);
+        var partitionFailure = persistence.Load("slot", fixture.Context);
+        Assert.Equal(PersistenceErrorCodes.SizeLimitExceeded, partitionFailure.Error!.Code);
+        Assert.Equal("characters", partitionFailure.Error.Partition);
+
+        (fixture, storage, persistence) = Saved();
+        data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value);
+        data["characters"] = new byte[800_000];
+        data["entities"] = new byte[800_000];
+        data["npcs"] = new byte[800_000];
+        Replace(storage, data);
+        var aggregateFailure = persistence.Load("slot", fixture.Context);
+        Assert.Equal(PersistenceErrorCodes.SizeLimitExceeded, aggregateFailure.Error!.Code);
+        Assert.Null(aggregateFailure.Error.Partition);
+    }
+
+    [Fact]
+    public void UndeclaredPhysicalPartitionAndUnknownJsonPropertyAreRejected()
+    {
+        var (fixture, storage, persistence) = Saved();
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value);
+        data["unknown"] = "{}"u8.ToArray();
+        Replace(storage, data);
+        Assert.Equal(PersistenceErrorCodes.InvalidData, persistence.Load("slot", fixture.Context).Error!.Code);
+
+        (fixture, storage, persistence) = Saved();
+        data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value);
+        var json = System.Text.Encoding.UTF8.GetString(data["characters"]);
+        data["characters"] = System.Text.Encoding.UTF8.GetBytes(json.Insert(json.Length - 1, ",\"unknown\":true"));
+        RewriteManifest(data, "characters");
+        Replace(storage, data);
+        Assert.Equal(PersistenceErrorCodes.InvalidData, persistence.Load("slot", fixture.Context).Error!.Code);
     }
 
     [Fact]
@@ -86,6 +130,25 @@ public sealed class WorldPersistenceTests
     }
 
     [Fact]
+    public void StagedWriteFailureNeverCommitsAndPreservesPriorSlotBytes()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var baselinePersistence = new WorldPersistence(storage);
+        Assert.True(baselinePersistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var before = storage.Read("slot").Value!;
+        var failingStorage = new FailingWriteStorage(storage, failAtWrite: 3);
+
+        var result = new WorldPersistence(failingStorage).Save("slot", "changed-world", fixture.World);
+
+        Assert.False(result.IsSuccess);
+        Assert.False(failingStorage.CommitCalled);
+        var after = storage.Read("slot").Value!;
+        Assert.Equal(before.Keys.Order(), after.Keys.Order());
+        foreach (var key in before.Keys) Assert.Equal(before[key], after[key]);
+    }
+
+    [Fact]
     public void MalformedAndUnresolvedReferenceLoadsDoNotExposePartialWorld()
     {
         var (fixture, storage, persistence) = Saved();
@@ -119,11 +182,11 @@ public sealed class WorldPersistenceTests
         Assert.True(write.Commit().IsSuccess);
     }
 
-    private static void RewriteManifest(Dictionary<string, byte[]> data)
+    private static void RewriteManifest(Dictionary<string, byte[]> data, string partitionId = "characters")
     {
         var manifest = JsonSerializer.Deserialize<SaveManifest>(data["manifest"], Options)!;
-        var descriptors = manifest.Partitions!.Select(item => item.Id == "characters"
-            ? item with { Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data["characters"])) }
+        var descriptors = manifest.Partitions!.Select(item => item.Id == partitionId
+            ? item with { Sha256 = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data[partitionId])) }
             : item).ToArray();
         data["manifest"] = JsonSerializer.SerializeToUtf8Bytes(manifest with { Partitions = descriptors }, Options);
     }
@@ -132,21 +195,32 @@ public sealed class WorldPersistenceTests
 
     private sealed record Fixture(PersistentWorldState World, PersistenceLoadContext Context, EntityId CharacterId, EntityId RegionId)
     {
-        public static Fixture Create()
+        public static Fixture Create(bool reverseMetadataInsertion = false)
         {
             var entities = new EntityRegistry();
             var rootId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000001"));
             var regionId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000002"));
             var characterId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000003"));
+            var ownerId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000004"));
+            var siblingId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000005"));
+            var retiredId = new EntityId(Guid.Parse("00000000-0000-0000-0000-000000000006"));
             Assert.True(entities.Register(Entity(rootId, "Region", null, null)).IsSuccess);
             Assert.True(entities.Register(Entity(regionId, "Region", rootId, null)).IsSuccess);
-            Assert.True(entities.Register(Entity(characterId, "Character", null, regionId)).IsSuccess);
+            Assert.True(entities.Register(Entity(ownerId, "Reference", null, null, EntityLifecycleState.Inactive)).IsSuccess);
+            Assert.True(entities.Register(Entity(siblingId, "Region", rootId, null)).IsSuccess);
+            Assert.True(entities.Register(new EntitySnapshot(retiredId, new("Reference"), EntityLifecycleState.Retired,
+                [new("historical")], null, null, null, [new("archive")], 1, 6)).IsSuccess);
+            Assert.True(entities.Register(new EntitySnapshot(characterId, new("Character"), EntityLifecycleState.Active,
+                [new("tag-z"), new("tag-a")], null, ownerId, regionId, [new("component-z"), new("component-a")], 2, null)).IsSuccess);
+
+            var metadata = Metadata(reverseMetadataInsertion);
 
             var regions = new RegionFramework(entities);
             var regionSnapshot = new RegionFrameworkSnapshot(1, rootId,
-                [new(rootId, new RegionCategory("WorldScope"), null, RegionSimulationState.Abstract, rootId, null, new Dictionary<string, string>()),
-                 new(regionId, new RegionCategory("NeutralArea"), rootId, RegionSimulationState.Active, rootId, null, new Dictionary<string, string>())],
-                [], [new(characterId, regionId)]);
+                [new(rootId, new RegionCategory("WorldScope"), null, RegionSimulationState.Abstract, rootId, "root-boundary", metadata),
+                 new(regionId, new RegionCategory("NeutralArea"), rootId, RegionSimulationState.Active, rootId, "area-boundary", metadata),
+                 new(siblingId, new RegionCategory("NeutralArea"), rootId, RegionSimulationState.Abstract, rootId, null, metadata)],
+                [new(regionId, siblingId, metadata)], [new(characterId, regionId)]);
             Assert.True(regions.Restore(regionSnapshot).IsSuccess);
 
             var references = new References(true);
@@ -159,12 +233,22 @@ public sealed class WorldPersistenceTests
             var calendar = CalendarModel.Create(new CalendarDefinition(new CalendarId("neutral-calendar"), 1, 10,
                 [new("period", 10)], [])).Value!;
             var clock = new WorldClock(calendar, new WorldTimestamp(7));
-            Assert.True(clock.Scheduler.ScheduleAbsolute(new ScheduleId("pending"), new WorldTimestamp(12), clock.Timestamp, "fixture").IsSuccess);
+            Assert.True(clock.SetScale(new TimeScale(3, 2)).IsSuccess);
+            Assert.True(clock.Advance(new WorldDuration(1)).IsSuccess);
+            Assert.True(clock.Scheduler.ScheduleAbsolute(new ScheduleId("pending"), new WorldTimestamp(12), clock.Timestamp,
+                "fixture", metadata, new WorldDuration(5)).IsSuccess);
+            Assert.True(clock.SimulationLayers.Register(new SimulationLayerId("abstract-layer"), new WorldDuration(3), clock.Timestamp).IsSuccess);
+            Assert.True(clock.Pause(new PauseReason("fixture-pause")).IsSuccess);
             return new Fixture(new(entities, clock, regions, characters, npcs), new(calendar, references, references), characterId, regionId);
         }
 
-        private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region) =>
-            new(id, new EntityCategory(category), EntityLifecycleState.Active, [], parent, null, region, [], 0, null);
+        private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
+            EntityLifecycleState lifecycle = EntityLifecycleState.Active) =>
+            new(id, new EntityCategory(category), lifecycle, [], parent, null, region, [], 0, null);
+
+        private static IReadOnlyDictionary<string, string> Metadata(bool reverse) => reverse
+            ? new Dictionary<string, string> { ["zeta"] = "last", ["alpha"] = "first" }
+            : new Dictionary<string, string> { ["alpha"] = "first", ["zeta"] = "last" };
     }
 
     private sealed class References(bool valid) : ICharacterReferenceValidator, INpcReferenceProvider
@@ -176,5 +260,26 @@ public sealed class WorldPersistenceTests
         public bool IsKnownLifeStage(LifeStageId lifeStageId) => valid && lifeStageId == new LifeStageId("established");
         public bool IsKnownPurpose(NpcPurposeId purposeId) => valid && purposeId == Purpose;
         public NpcScheduleDefinition? FindSchedule(NpcScheduleId scheduleId) => valid && scheduleId == Schedule.Id ? Schedule : null;
+    }
+
+    private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage
+    {
+        public bool CommitCalled { get; private set; }
+        public PersistenceResult<IReadOnlyDictionary<string, byte[]>> Read(string slotId) => inner.Read(slotId);
+        public ISaveWriteTransaction BeginWrite(string slotId) => new Transaction(this, inner.BeginWrite(slotId), failAtWrite);
+
+        private sealed class Transaction(FailingWriteStorage owner, ISaveWriteTransaction inner, int failAtWrite) : ISaveWriteTransaction
+        {
+            private int writeCount;
+            public PersistenceResult Write(string partitionId, ReadOnlyMemory<byte> data) => ++writeCount == failAtWrite
+                ? PersistenceResult.Failure(PersistenceErrorCodes.StorageFailure, "Injected staged-write failure.", partitionId)
+                : inner.Write(partitionId, data);
+            public PersistenceResult Commit()
+            {
+                owner.CommitCalled = true;
+                return inner.Commit();
+            }
+            public void Dispose() => inner.Dispose();
+        }
     }
 }

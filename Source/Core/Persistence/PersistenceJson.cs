@@ -12,7 +12,13 @@ internal static class PersistenceJson
 {
     public static JsonSerializerOptions CreateOptions()
     {
-        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            WriteIndented = false,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        };
+        options.Converters.Add(new OrdinalStringDictionaryConverter());
         options.Converters.Add(new EntityIdConverter());
         options.Converters.Add(new StringValueConverter<EntityCategory>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<EntityTag>(v => new(v), v => v.Value));
@@ -20,6 +26,7 @@ internal static class PersistenceJson
         options.Converters.Add(new StringValueConverter<CalendarId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<PauseReason>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ScheduleId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<SimulationLayerId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<RegionCategory>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<CharacterIdentity>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<CharacterStatusId>(v => new(v), v => v.Value));
@@ -58,13 +65,41 @@ internal static class PersistenceJson
         {
             using var document = JsonDocument.ParseValue(ref reader);
             var root = document.RootElement;
-            return new TimeScale(root.GetProperty("numerator").GetInt64(), root.GetProperty("denominator").GetInt64());
+            if (root.ValueKind != JsonValueKind.Object || root.EnumerateObject().Count() != 2 ||
+                !root.TryGetProperty("numerator", out var numerator) || !root.TryGetProperty("denominator", out var denominator))
+                throw new JsonException("Time scale contains unknown or missing properties.");
+            return new TimeScale(numerator.GetInt64(), denominator.GetInt64());
         }
         public override void Write(Utf8JsonWriter writer, TimeScale value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
             writer.WriteNumber("numerator", value.Numerator);
             writer.WriteNumber("denominator", value.Denominator);
+            writer.WriteEndObject();
+        }
+    }
+
+    /// <summary>Canonicalizes every persisted metadata map by ordinal key, independent of insertion order.</summary>
+    private sealed class OrdinalStringDictionaryConverter : JsonConverter<IReadOnlyDictionary<string, string>>
+    {
+        public override IReadOnlyDictionary<string, string> Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.StartObject) throw new JsonException("Metadata must be an object.");
+            var values = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                if (reader.TokenType != JsonTokenType.PropertyName) throw new JsonException("Metadata property is malformed.");
+                var key = reader.GetString()!;
+                if (!reader.Read() || reader.TokenType != JsonTokenType.String || !values.TryAdd(key, reader.GetString()!))
+                    throw new JsonException("Metadata values must be strings with unique keys.");
+            }
+            return values;
+        }
+
+        public override void Write(Utf8JsonWriter writer, IReadOnlyDictionary<string, string> value, JsonSerializerOptions options)
+        {
+            writer.WriteStartObject();
+            foreach (var item in value.OrderBy(item => item.Key, StringComparer.Ordinal)) writer.WriteString(item.Key, item.Value);
             writer.WriteEndObject();
         }
     }

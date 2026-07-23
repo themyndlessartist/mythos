@@ -11,6 +11,7 @@ using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
 using Mythos.Framework.Organizations;
 using Mythos.Framework.Economy;
+using Mythos.Framework.DynamicEvents;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.Persistence;
@@ -36,6 +37,7 @@ internal static class PersistenceJson
         options.Converters.Add(new MembershipIdConverter());
         options.Converters.Add(new EconomyAccountIdConverter());
         options.Converters.Add(new EconomyTransferIdConverter());
+        options.Converters.Add(new DynamicWorldEventIdConverter());
         options.Converters.Add(new StringValueConverter<EntityCategory>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<EntityTag>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<ComponentTypeId>(v => new(v), v => v.Value));
@@ -59,6 +61,8 @@ internal static class PersistenceJson
         options.Converters.Add(new StringValueConverter<OrganizationKindId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<OrganizationRoleId>(v => new(v), v => v.Value));
         options.Converters.Add(new StringValueConverter<CurrencyId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<DynamicWorldEventTypeId>(v => new(v), v => v.Value));
+        options.Converters.Add(new StringValueConverter<DynamicWorldEventOutcomeId>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldTimestamp>(v => new(v), v => v.Value));
         options.Converters.Add(new LongValueConverter<WorldDuration>(v => new(v), v => v.Value));
         options.Converters.Add(new TimeScaleConverter());
@@ -150,6 +154,15 @@ internal static class PersistenceJson
             Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
                 ? new EconomyTransferId(value) : throw new JsonException("Economy Transfer ID is invalid.");
         public override void Write(Utf8JsonWriter writer, EconomyTransferId value, JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.ToString());
+    }
+
+    private sealed class DynamicWorldEventIdConverter : JsonConverter<DynamicWorldEventId>
+    {
+        public override DynamicWorldEventId Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options) =>
+            Guid.TryParse(reader.GetString(), out var value) && value != Guid.Empty
+                ? new DynamicWorldEventId(value) : throw new JsonException("Dynamic World Event ID is invalid.");
+        public override void Write(Utf8JsonWriter writer, DynamicWorldEventId value, JsonSerializerOptions options) =>
             writer.WriteStringValue(value.ToString());
     }
 

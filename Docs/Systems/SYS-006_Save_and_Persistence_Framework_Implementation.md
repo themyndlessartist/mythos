@@ -29,6 +29,8 @@ The Organization increment adds a required Organization partition restored after
 
 The Economy increment adds a required Economy partition restored after Entity identity and advances the prototype marker to `m-002.6`. Stable accounts, opening/current balances, immutable transfers, lifecycle, timestamps, correlation, and provenance remain deterministic; load recomputes balances from the ledger before accepting state.
 
+The Dynamic World Event increment adds a required `dynamic-events` partition restored after Entities and Regions and advances the prototype marker to `m-002.7`. Persistent situation lifecycle, timing, Region, participants, canonical attributes, outcomes, source, and provenance remain deterministic and integrity checked.
+
 Save validates cross-domain references, serializes canonical domain projections in fixed order, stages every partition through `ISaveWriteTransaction`, and exposes the replacement only after commit. Load verifies the exact physical partition set and byte limits before hashing or deserialization, then verifies the manifest, required declarations, versions, and checksums before constructing an entirely fresh candidate in Entity, Time, Region, Character, and NPC dependency order. The candidate is returned only after final cross-domain validation; callers retain their prior world on every failure.
 
 Failures use stable `persistence.*` codes for corrupt data, missing partitions, unsupported versions, malformed or null data, unresolved references, and storage/commit failures. Persistent IDs are restored exactly; the loader never generates replacements.

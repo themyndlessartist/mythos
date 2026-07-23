@@ -11,6 +11,7 @@ using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
 using Mythos.Framework.Organizations;
 using Mythos.Framework.Economy;
+using Mythos.Framework.DynamicEvents;
 using Mythos.Framework.Time;
 
 namespace Mythos.Framework.UnitTests.Persistence;
@@ -50,6 +51,8 @@ public sealed class WorldPersistenceTests
             loaded.Value.Organizations.ExportSnapshot().Memberships!.Single().RoleIds);
         Assert.Equal(fixture.World.Economy.ExportSnapshot().Accounts, loaded.Value.Economy.ExportSnapshot().Accounts);
         Assert.Equal(fixture.World.Economy.ExportSnapshot().Transfers, loaded.Value.Economy.ExportSnapshot().Transfers);
+        Assert.Equal(fixture.World.DynamicEvents.ExportSnapshot().Events!.Single().Id,
+            loaded.Value.DynamicEvents.ExportSnapshot().Events!.Single().Id);
         Assert.True(loaded.Value.Regions.ValidateReferences().IsSuccess);
         Assert.True(loaded.Value.Npcs.ValidateReferences().IsSuccess);
         Assert.True(persistence.Save("roundtrip", "neutral-world", loaded.Value).IsSuccess);
@@ -344,6 +347,28 @@ public sealed class WorldPersistenceTests
         Assert.Null(result.Value);
     }
 
+    [Fact]
+    public void BrokenDynamicEventParticipantReferenceRejectsCompleteWorldLoad()
+    {
+        var fixture = Fixture.Create();
+        var storage = new InMemorySaveStorage();
+        var persistence = new WorldPersistence(storage);
+        Assert.True(persistence.Save("slot", "neutral-world", fixture.World).IsSuccess);
+        var data = storage.Read("slot").Value!.ToDictionary(item => item.Key, item => item.Value.ToArray());
+        var original = "00000000-0000-0000-0000-000000000003"u8.ToArray();
+        var missing = "00000000-0000-0000-0000-000000000099"u8.ToArray();
+        var index = data["dynamic-events"].AsSpan().IndexOf(original);
+        Assert.True(index >= 0);
+        missing.CopyTo(data["dynamic-events"], index);
+        RewriteManifest(data, "dynamic-events");
+        Replace(storage, data);
+
+        var result = persistence.Load("slot", fixture.Context);
+
+        Assert.Equal(PersistenceErrorCodes.UnresolvedReference, result.Error?.Code);
+        Assert.Null(result.Value);
+    }
+
     private static (Fixture Fixture, InMemorySaveStorage Storage, WorldPersistence Persistence) Saved()
     {
         var fixture = Fixture.Create();
@@ -453,8 +478,11 @@ public sealed class WorldPersistenceTests
                 new WorldTimestamp(5), "fixture:account").Value!;
             Assert.True(economy.Transfer(characterAccount.Id, organizationAccount.Id, 25,
                 new WorldTimestamp(5), "fixture:transfer", "fixture:economy").IsSuccess);
+            var dynamicEvents = new DynamicWorldEventFramework(entities, regions, new FixedDynamicEventIdGenerator());
+            Assert.True(dynamicEvents.Create(new DynamicWorldEventTypeId("fixture-situation"), new WorldTimestamp(5),
+                null, true, regionId, [characterId, organizationId], metadata, "fixture:event", "fixture:dynamic").IsSuccess);
             return new Fixture(new(entities, clock, regions, characters, npcs, relationships, information, history,
-                reputation, properties, organizations, economy), new(calendar, references, references), characterId, regionId);
+                reputation, properties, organizations, economy, dynamicEvents), new(calendar, references, references), characterId, regionId);
         }
 
         private static EntitySnapshot Entity(EntityId id, string category, EntityId? parent, EntityId? region,
@@ -508,6 +536,11 @@ public sealed class WorldPersistenceTests
         private int next = 14;
         public EconomyAccountId CreateAccountId() => new(new Guid(next++, 0, 0, new byte[8]));
         public EconomyTransferId CreateTransferId() => new(new Guid(next++, 0, 0, new byte[8]));
+    }
+
+    private sealed class FixedDynamicEventIdGenerator : IDynamicWorldEventIdGenerator
+    {
+        public DynamicWorldEventId Create() => new(Guid.Parse("00000000-0000-0000-0000-000000000017"));
     }
 
     private sealed class FailingWriteStorage(ISaveStorage inner, int failAtWrite) : ISaveStorage

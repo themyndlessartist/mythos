@@ -6,6 +6,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Implemented SYS-015 Dynamic World Event Framework with persistent situation lifecycle, Region and participant scope, explicit outcomes, canonical state, optional failure-safe notifications, and complete-world persistence.
 - Approved SYS-015 Dynamic World Event Framework specification for persistent world situations, lifecycle, participants, Region scope, and explicit outcomes.
 - Implemented SYS-014 Economy Framework with Entity-owned currency accounts, immutable atomic transfers, ledger-recomputed validation, deterministic queries, optional failure-safe events, and complete-world persistence.
 - Approved SYS-014 Economy Framework specification for Entity-owned currency accounts and immutable atomic transfers.

@@ -11,6 +11,7 @@ using Mythos.Framework.Reputation;
 using Mythos.Framework.Properties;
 using Mythos.Framework.Organizations;
 using Mythos.Framework.Economy;
+using Mythos.Framework.DynamicEvents;
 using Mythos.Framework.Time;
 
 if (FrameworkAssembly.Name != "Mythos.Framework")
@@ -147,8 +148,16 @@ if (!economyTransfer.IsSuccess)
     Console.Error.WriteLine("Economy Framework smoke validation failed.");
     return 1;
 }
+var dynamicEvents = new DynamicWorldEventFramework(entities, regions);
+var dynamicEvent = dynamicEvents.Create(new DynamicWorldEventTypeId("fixture-situation"), clock.Timestamp, null,
+    true, child.Value.Id, [characterEntity.Id, organizationEntity.Id], new Dictionary<string, string> { ["state"] = "active" });
+if (!dynamicEvent.IsSuccess)
+{
+    Console.Error.WriteLine("Dynamic World Event Framework smoke validation failed.");
+    return 1;
+}
 var world = new PersistentWorldState(entities, clock, regions, characters, npcs, relationships, information, history,
-    reputation, properties, organizations, economy);
+    reputation, properties, organizations, economy, dynamicEvents);
 var saved = persistence.Save("smoke-slot", "neutral-smoke-world", world);
 var loaded = persistence.Load("smoke-slot", new PersistenceLoadContext(calendar, new SmokeCharacterReferences(), npcReferences));
 if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != clock.Timestamp ||
@@ -160,7 +169,8 @@ if (!saved.IsSuccess || !loaded.IsSuccess || loaded.Value!.Clock.Timestamp != cl
     loaded.Value.Reputation.Find(reputationRecord.Value!.Id).Value!.Value != 0 ||
     loaded.Value.Properties.Find(characterEntity.Id).Value!.KindId != new PropertyKindId("fixture-asset") ||
     loaded.Value.Organizations.FindActiveMembership(organizationEntity.Id, characterEntity.Id).Value!.Id != membership.Value!.Id ||
-    loaded.Value.Economy.FindAccount(organizationAccount.Id).Value!.Balance != 4)
+    loaded.Value.Economy.FindAccount(organizationAccount.Id).Value!.Balance != 4 ||
+    loaded.Value.DynamicEvents.Find(dynamicEvent.Value!.Id).Value!.RegionEntityId != child.Value.Id)
 {
     Console.Error.WriteLine($"Persistence Framework smoke validation failed: {saved.Error?.Message ?? loaded.Error?.Message}");
     return 1;

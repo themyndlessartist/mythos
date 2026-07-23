@@ -117,7 +117,7 @@ public sealed class OrganizationFramework
     {
         var found = FindMutableMembership(id, timestamp, provenanceReference);
         if (!found.IsSuccess) return AsResult(found.Error!);
-        var roleValidation = ValidateRoles(roles);
+        var roleValidation = ValidateRoles(roles, requireCanonical: false);
         if (!roleValidation.IsSuccess) return roleValidation;
         var published = Publish(new("MembershipRolesChanged", found.Value!.OrganizationEntityId, timestamp, id,
             found.Value.MemberEntityId));
@@ -246,7 +246,7 @@ public sealed class OrganizationFramework
             OrganizationErrorCodes.InvalidReference, "New member must be a distinct Active Entity.");
         if (!ValidOptional(provenance)) return OrganizationResult.Failure(OrganizationErrorCodes.InvalidIdentifier,
             "Provenance must be normalized.");
-        return ValidateRoles(roles);
+        return ValidateRoles(roles, requireCanonical: false);
     }
 
     private OrganizationResult ValidateMembership(MembershipSnapshot item,
@@ -262,7 +262,7 @@ public sealed class OrganizationFramework
             OrganizationErrorCodes.InvalidTimestamp, "Membership creation cannot follow last change.");
         if (!ValidOptional(item.ProvenanceReference)) return OrganizationResult.Failure(
             OrganizationErrorCodes.InvalidIdentifier, "Membership provenance must be normalized.");
-        return ValidateRoles(item.RoleIds);
+        return ValidateRoles(item.RoleIds, requireCanonical: true);
     }
 
     private OrganizationResult<OrganizationProfile> FindMutableOrganization(EntityId id, WorldTimestamp timestamp,
@@ -293,9 +293,10 @@ public sealed class OrganizationFramework
         return found;
     }
 
-    private static OrganizationResult ValidateRoles(IReadOnlyList<OrganizationRoleId>? roles)
+    private static OrganizationResult ValidateRoles(IReadOnlyList<OrganizationRoleId>? roles, bool requireCanonical)
     {
-        if (roles is null || roles.Any(role => !Valid(role.Value)) || roles.Distinct().Count() != roles.Count)
+        if (roles is null || roles.Any(role => !Valid(role.Value)) || roles.Distinct().Count() != roles.Count ||
+            requireCanonical && !roles.SequenceEqual(roles.OrderBy(role => role.Value, StringComparer.Ordinal)))
             return OrganizationResult.Failure(OrganizationErrorCodes.InvalidIdentifier,
                 "Membership roles must be non-null, unique, and normalized.");
         return OrganizationResult.Success();

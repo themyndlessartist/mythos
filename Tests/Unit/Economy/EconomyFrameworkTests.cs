@@ -128,6 +128,20 @@ public sealed class EconomyFrameworkTests
             fixture.Framework.RestoreSnapshot(new EconomyFrameworkSnapshot(1, [account, account], [])).Error?.Code);
     }
 
+    [Fact]
+    public void RestoreRejectsTransferAfterClosedAccountTimestamp()
+    {
+        var fixture = CreateFixture();
+        var source = new EconomyAccountSnapshot(new EconomyAccountId(Guid.Parse("10000000-0000-0000-0000-000000000000")),
+            fixture.First, Currency, 1, 0, EconomyAccountLifecycleState.Closed, new WorldTimestamp(1), new WorldTimestamp(2), null);
+        var destination = new EconomyAccountSnapshot(new EconomyAccountId(Guid.Parse("20000000-0000-0000-0000-000000000000")),
+            fixture.Second, Currency, 0, 1, EconomyAccountLifecycleState.Active, new WorldTimestamp(1), new WorldTimestamp(3), null);
+        var transfer = new EconomyTransferSnapshot(new EconomyTransferId(Guid.Parse("30000000-0000-0000-0000-000000000000")),
+            source.Id, destination.Id, 1, new WorldTimestamp(3), null, null);
+        Assert.Equal(EconomyErrorCodes.InvalidTimestamp,
+            fixture.Framework.RestoreSnapshot(new EconomyFrameworkSnapshot(1, [source, destination], [transfer])).Error?.Code);
+    }
+
     private static Fixture CreateFixture(IEconomyEventSink? sink = null)
     {
         var entities = new EntityRegistry();

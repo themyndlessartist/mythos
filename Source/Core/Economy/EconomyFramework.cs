@@ -253,6 +253,9 @@ public sealed class EconomyFramework
             "Transfer account currencies do not match.");
         if (item.OccurredAt.Value < source.OpenedAt.Value || item.OccurredAt.Value < destination.OpenedAt.Value)
             return EconomyResult.Failure(EconomyErrorCodes.InvalidTimestamp, "Transfer precedes an account opening.");
+        if (item.OccurredAt.Value > source.LastChangedAt.Value || item.OccurredAt.Value > destination.LastChangedAt.Value)
+            return EconomyResult.Failure(EconomyErrorCodes.InvalidTimestamp,
+                "Transfer follows an account's final recorded change.");
         if (!ValidOptional(item.CorrelationReference) || !ValidOptional(item.ProvenanceReference))
             return EconomyResult.Failure(EconomyErrorCodes.InvalidIdentifier, "Transfer references must be normalized.");
         return EconomyResult.Success();

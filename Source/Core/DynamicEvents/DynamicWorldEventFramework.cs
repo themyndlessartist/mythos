@@ -170,6 +170,8 @@ public sealed class DynamicWorldEventFramework
             DynamicWorldEventErrorCodes.InvalidReference, "Dynamic World Event Region is invalid.");
         if (item.ScheduledStartAt is { } scheduled && scheduled.Value < item.CreatedAt.Value ||
             item.StartedAt is { } started && started.Value < item.CreatedAt.Value ||
+            item.ScheduledStartAt is { } scheduledStart && item.StartedAt is { } actualStart &&
+                actualStart.Value < scheduledStart.Value ||
             item.ConcludedAt is { } concluded && (concluded.Value < item.CreatedAt.Value ||
                 item.StartedAt is { } actual && concluded.Value < actual.Value))
             return DynamicWorldEventResult.Failure(DynamicWorldEventErrorCodes.InvalidTimestamp,

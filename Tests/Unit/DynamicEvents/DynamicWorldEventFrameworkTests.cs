@@ -15,7 +15,7 @@ public sealed class DynamicWorldEventFrameworkTests
         var fixture = CreateFixture();
         var item = fixture.Framework.Create(Type, new(1), new WorldTimestamp(2), false, fixture.Region,
             [fixture.Second, fixture.First], new Dictionary<string, string> { ["zeta"] = "z", ["alpha"] = "a" }, "source:1").Value!;
-        Assert.Equal([fixture.First, fixture.Second], item.ParticipantEntityIds);
+        Assert.Equal(new[] { fixture.First, fixture.Second }.OrderBy(id => id.Value), item.ParticipantEntityIds);
         Assert.Equal(["alpha", "zeta"], item.Attributes!.Keys);
         Assert.True(fixture.Framework.Activate(item.Id, new(2)).IsSuccess);
         Assert.True(fixture.Framework.Resolve(item.Id, new("completed"), new(3)).IsSuccess);
@@ -49,6 +49,10 @@ public sealed class DynamicWorldEventFrameworkTests
             fixture.Framework.Create(Type, new(1), null, true, fixture.Region, [missing], null).Error?.Code);
         Assert.Equal(DynamicWorldEventErrorCodes.InvalidTimestamp,
             fixture.Framework.Create(Type, new(2), new WorldTimestamp(1), false, fixture.Region, [], null).Error?.Code);
+        var scheduled = fixture.Framework.Create(Type, new(1), new WorldTimestamp(3), false,
+            fixture.Region, [], null).Value!;
+        Assert.Equal(DynamicWorldEventErrorCodes.InvalidTimestamp,
+            fixture.Framework.Activate(scheduled.Id, new WorldTimestamp(2)).Error?.Code);
     }
 
     [Fact]

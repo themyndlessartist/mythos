@@ -128,6 +128,11 @@ public sealed class OrganizationFrameworkTests
             fixture.Framework.RestoreSnapshot(new OrganizationFrameworkSnapshot(1, [profile], [one, one])).Error?.Code);
         Assert.Equal(OrganizationErrorCodes.DuplicateActiveMembership,
             fixture.Framework.RestoreSnapshot(new OrganizationFrameworkSnapshot(1, [profile], [one, two])).Error?.Code);
+        var unsorted = new MembershipSnapshot(one.Id, fixture.Organization, fixture.Member,
+            [new OrganizationRoleId("zeta"), new OrganizationRoleId("alpha")], MembershipLifecycleState.Active,
+            new WorldTimestamp(1), new WorldTimestamp(1), null);
+        Assert.Equal(OrganizationErrorCodes.InvalidIdentifier,
+            fixture.Framework.RestoreSnapshot(new OrganizationFrameworkSnapshot(1, [profile], [unsorted])).Error?.Code);
     }
 
     private static MembershipSnapshot Membership(Guid id, Fixture fixture) => new(new MembershipId(id),

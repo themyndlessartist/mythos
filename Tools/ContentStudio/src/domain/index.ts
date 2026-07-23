@@ -1,5 +1,7 @@
 export * from "./canonical";
+export * from "./assets";
 export * from "./drafts";
+export * from "./export";
 export * from "./history";
 export * from "./ids";
 export * from "./models";

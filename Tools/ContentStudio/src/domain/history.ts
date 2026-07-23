@@ -3,7 +3,7 @@ export class CommandHistory<T> {
   private future: T[] = [];
   constructor(
     private current: T,
-    private readonly clone: (state: T) => T = structuredClone,
+    private readonly clone: (state: T) => T = (state) => structuredClone(state),
   ) {}
   get value(): T {
     return this.clone(this.current);

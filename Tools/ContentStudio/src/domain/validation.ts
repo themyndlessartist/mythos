@@ -10,6 +10,7 @@ import type {
   SpriteAnimationManifest,
 } from "./models";
 import { normalizePackagePath, RASTER_MEDIA_TYPES } from "./security";
+import { ordinalCompare } from "./canonical";
 
 export type DiagnosticSeverity = "error" | "warning";
 export interface Diagnostic {
@@ -195,7 +196,7 @@ export function validateNpc(value: NpcAuthoringRecord): Diagnostic[] {
   if (
     duplicateValues(tags).size ||
     tags.some(
-      (tag, index) => index > 0 && tags[index - 1].localeCompare(tag) >= 0,
+      (tag, index) => index > 0 && ordinalCompare(tags[index - 1], tag) >= 0,
     )
   )
     add("npc.tags-order", "/tags", "Tags must be sorted and unique.");

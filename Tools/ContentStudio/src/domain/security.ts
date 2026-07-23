@@ -73,6 +73,15 @@ export interface MediaCandidate {
   width: number;
   height: number;
 }
+export interface RasterImportCandidate extends MediaCandidate {
+  id: string;
+  path: string;
+}
+export interface RasterImportResult {
+  accepted: boolean;
+  diagnostics: string[];
+  assets: RasterImportCandidate[];
+}
 export function validateRasterImport(
   candidate: MediaCandidate,
   limits: ImportLimits = MVP_IMPORT_LIMITS,
@@ -103,4 +112,39 @@ export function validateRasterImport(
       errors.push("media.decoded-too-large");
   }
   return errors;
+}
+
+/** Validates the entire proposed set before returning any accepted assets. */
+export function validateRasterBatch(
+  candidates: RasterImportCandidate[],
+  existing: ReadonlyArray<{ path: string; size: number }> = [],
+  limits: ImportLimits = MVP_IMPORT_LIMITS,
+): RasterImportResult {
+  const diagnostics: string[] = [];
+  if (existing.length + candidates.length > limits.maxFileCount)
+    diagnostics.push("media.file-count-exceeded");
+  const total = [
+    ...existing.map((item) => item.size),
+    ...candidates.map((item) => item.bytes.byteLength),
+  ].reduce((sum, size) => sum + size, 0);
+  if (total > limits.maxPackageBytes)
+    diagnostics.push("media.package-too-large");
+  const seen = new Set(existing.map((item) => item.path.toLowerCase()));
+  candidates.forEach((candidate) => {
+    diagnostics.push(
+      ...validateRasterImport(candidate, limits).map(
+        (code) => `${candidate.path}:${code}`,
+      ),
+    );
+    const normalized = normalizePackagePath(candidate.path);
+    if (!normalized) diagnostics.push(`${candidate.path}:security.unsafe-path`);
+    else if (seen.has(normalized.toLowerCase()))
+      diagnostics.push(`${candidate.path}:security.path-collision`);
+    else seen.add(normalized.toLowerCase());
+  });
+  return {
+    accepted: diagnostics.length === 0,
+    diagnostics,
+    assets: diagnostics.length ? [] : candidates,
+  };
 }

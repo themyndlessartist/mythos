@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalJson,
+  assembleExportBundle,
   CommandHistory,
   createAuthoringId,
   deterministicWorkspace,
@@ -8,10 +9,13 @@ import {
   exportReady,
   isAuthoringId,
   LocalStorageDraftAdapter,
+  MemoryAssetByteAdapter,
   MemoryDraftAdapter,
   normalizePackagePath,
   sniffRasterMediaType,
   validateRasterImport,
+  validateRasterBatch,
+  exportReadinessDiagnostics,
   validateWorkspace,
   type AuthoringWorkspace,
 } from ".";
@@ -289,6 +293,100 @@ describe("deterministic export", () => {
       '{\n  "a": {\n    "c": 1,\n    "d": 2\n  },\n  "frames": [\n    2,\n    1\n  ],\n  "z": 1\n}\n',
     );
   });
+  it("assembles every record, manifest, and raster with actual SHA-256 metadata deterministically", async () => {
+    const value = workspace();
+    const bytes = new MemoryAssetByteAdapter();
+    await bytes.saveBatch(
+      "draft",
+      new Map([["studio.body", new Uint8Array([1, 2, 3, 4])]]),
+    );
+    const first = await assembleExportBundle(value, "draft", bytes);
+    const second = await assembleExportBundle(value, "draft", bytes);
+    expect(first.bytes).toEqual(second.bytes);
+    expect(first.bundle.files.map((file) => file.path)).toEqual([
+      "assets/characters/body.png",
+      "manifests/maps/studio.map.json",
+      "manifests/sprites/studio.sprite.json",
+      "package.json",
+      "records/npcs/studio.npc.json",
+    ]);
+    expect(first.manifest.entries).toHaveLength(4);
+    const asset = first.manifest.entries.find(
+      (entry) => entry.kind === "asset",
+    )!;
+    expect(asset).toMatchObject({ media_type: "image/png", size: 4 });
+    expect(asset.integrity.digest).toMatch(/^[0-9a-f]{64}$/);
+    expect(new Set(first.manifest.entries.map((entry) => entry.path))).toEqual(
+      new Set(
+        first.bundle.files
+          .filter((file) => file.path !== "package.json")
+          .map((file) => file.path),
+      ),
+    );
+  });
+  it("fails atomically when any persisted content byte is absent", async () => {
+    await expect(
+      assembleExportBundle(workspace(), "draft", new MemoryAssetByteAdapter()),
+    ).rejects.toMatchObject({
+      diagnostics: [expect.objectContaining({ code: "asset.bytes-missing" })],
+    });
+  });
+  it("blocks UI export readiness with structured domain diagnostics", () => {
+    const value = workspace();
+    value.maps[0].background_asset = ref("studio.missing");
+    expect(exportReadinessDiagnostics(value)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "reference.missing",
+          path: "/background_asset",
+        }),
+      ]),
+    );
+  });
+});
+
+describe("atomic raster batches", () => {
+  const candidate = (path: string) => ({
+    id: "studio.asset",
+    path,
+    name: "x.png",
+    type: "image/png",
+    width: 1,
+    height: 1,
+    bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  });
+  it("rejects aggregate limits and returns no partial assets", () => {
+    const result = validateRasterBatch(
+      [candidate("assets/a.png"), candidate("assets/b.png")],
+      [],
+      {
+        maxFileBytes: 100,
+        maxWidth: 10,
+        maxHeight: 10,
+        maxDecodedBytes: 100,
+        maxFileCount: 1,
+        maxPackageBytes: 10,
+      },
+    );
+    expect(result.accepted).toBe(false);
+    expect(result.assets).toEqual([]);
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        "media.file-count-exceeded",
+        "media.package-too-large",
+      ]),
+    );
+  });
+  it("rejects reserved paths, duplicates, and case-insensitive collisions atomically", () => {
+    const result = validateRasterBatch([
+      candidate("assets/CON.png"),
+      candidate("assets/Hero.png"),
+      candidate("assets/hero.png"),
+    ]);
+    expect(result.assets).toEqual([]);
+    expect(result.diagnostics.join(" ")).toMatch(/unsafe-path/);
+    expect(result.diagnostics.join(" ")).toMatch(/path-collision/);
+  });
 });
 
 describe("draft adapters and command history", () => {
@@ -316,6 +414,33 @@ describe("draft adapters and command history", () => {
     await adapter.save("one", workspace());
     expect((await adapter.load("one"))?.package.package_id).toBe(
       "studio.sample",
+    );
+  });
+  it("recovers safely by rejecting malformed or unsupported persisted drafts", async () => {
+    const storage = {
+      getItem: () => "{bad",
+      setItem: () => undefined,
+      removeItem: () => undefined,
+    };
+    await expect(
+      new LocalStorageDraftAdapter(storage).load("one"),
+    ).rejects.toBeInstanceOf(Error);
+    const unsupported = {
+      ...storage,
+      getItem: () => JSON.stringify({ version: 99, workspace: {} }),
+    };
+    await expect(
+      new LocalStorageDraftAdapter(unsupported).load("one"),
+    ).rejects.toThrow("draft.unsupported-version");
+  });
+  it("reopens raster bytes with stable IDs through the durable boundary contract", async () => {
+    const adapter = new MemoryAssetByteAdapter();
+    await adapter.saveBatch(
+      "one",
+      new Map([["studio.body", new Uint8Array([7, 8, 9])]]),
+    );
+    expect(await adapter.load("one", "studio.body")).toEqual(
+      new Uint8Array([7, 8, 9]),
     );
   });
   it("undoes, redoes, and clears redo after a new command", () => {

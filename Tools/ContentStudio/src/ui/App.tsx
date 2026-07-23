@@ -1,16 +1,19 @@
-import { ChangeEvent, ReactNode, useEffect, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Archive,
   Box,
   ChevronDown,
   ChevronUp,
-  Copy,
   Download,
-  Eye,
-  EyeOff,
   FileImage,
   Image,
-  Lock,
   Map,
   Menu,
   Plus,
@@ -18,93 +21,82 @@ import {
   Save,
   Trash2,
   Undo2,
-  Unlock,
   Users,
   X,
 } from "lucide-react";
+import {
+  assembleExportBundle,
+  BUNDLE_MEDIA_TYPE,
+  canonicalJson,
+  CommandHistory,
+  exportReadinessDiagnostics,
+  IndexedDbAssetByteAdapter,
+  LocalStorageDraftAdapter,
+  ordinalCompare,
+  validateNpc,
+  validateRasterBatch,
+  validateWorkspace,
+  type AssetMetadata,
+  type AuthoringWorkspace,
+  type Diagnostic,
+  type RasterImportCandidate,
+} from "../domain";
 
 type View = "npcs" | "assets" | "maps" | "package";
-type Ref = { package_id: string; record_id: string };
-type Npc = {
-  document_kind: "mythos.npc-authoring";
-  schema_version: "1.0";
-  npc_record_id: string;
-  display_name: string;
-  visual: { sprite_manifest: Ref; options: Record<string, string> };
-  tags: string[];
-  notes: string;
-  extensions: Record<string, unknown>;
-};
-type Asset = {
-  id: string;
-  name: string;
-  path: string;
-  url: string;
-  type: string;
-  size: number;
-  width: number;
-  height: number;
-};
-type VisualLayer = {
-  layer_id: string;
-  display_name: string;
-  order: number;
-  assetId: string;
-  visible: boolean;
-  locked: boolean;
-};
-type MapLayer = VisualLayer & {
-  x: number;
-  y: number;
-  scale: number;
-  rotation: number;
-  opacity: number;
-};
-type Marker = {
-  marker_id: string;
-  kind: "region" | "spawn" | "reference";
-  display_name: string;
-  x: number;
-  y: number;
-};
-type Draft = {
-  npcs: Npc[];
-  assets: Asset[];
-  characterLayers: VisualLayer[];
-  mapBackground: string;
-  mapLayers: MapLayer[];
-  markers: Marker[];
-};
-
-const PACKAGE_ID = "mythos.local-workspace";
-const initialNpc = (id = "mythos.npc-record"): Npc => ({
-  document_kind: "mythos.npc-authoring",
-  schema_version: "1.0",
-  npc_record_id: id,
-  display_name: "Untitled NPC",
-  visual: {
-    sprite_manifest: {
-      package_id: PACKAGE_ID,
-      record_id: "mythos.character-visuals",
-    },
-    options: {},
-  },
-  tags: [],
-  notes: "",
-  extensions: {},
+const DRAFT_KEY = "default";
+const draftAdapter = new LocalStorageDraftAdapter(localStorage);
+const byteAdapter = new IndexedDbAssetByteAdapter();
+const ref = (record_id: string) => ({
+  package_id: "mythos.local-workspace",
+  record_id,
 });
-const initial: Draft = {
-  npcs: [initialNpc()],
+const initialWorkspace = (): AuthoringWorkspace => ({
+  package: {
+    document_kind: "mythos.content-package",
+    schema_version: "1.0",
+    package_id: "mythos.local-workspace",
+    package_version: "0.1.0",
+    display_name: "Local workspace",
+    entries: [],
+    dependencies: [],
+  },
+  npcs: [
+    {
+      document_kind: "mythos.npc-authoring",
+      schema_version: "1.0",
+      npc_record_id: "mythos.npc-record",
+      display_name: "Untitled NPC",
+      visual: { sprite_manifest: ref("mythos.character-visuals"), options: {} },
+      tags: [],
+      notes: "",
+    },
+  ],
+  sprites: [
+    {
+      document_kind: "mythos.sprite-animation",
+      schema_version: "1.0",
+      sprite_manifest_id: "mythos.character-visuals",
+      display_name: "Character visuals",
+      layers: [],
+      options: [],
+      animations: [],
+    },
+  ],
+  maps: [
+    {
+      document_kind: "mythos.layered-map",
+      schema_version: "1.0",
+      map_manifest_id: "mythos.local-map",
+      display_name: "Local map",
+      background_asset: ref("mythos.missing-background"),
+      layers: [],
+      markers: [],
+    },
+  ],
   assets: [],
-  characterLayers: [],
-  mapBackground: "",
-  mapLayers: [],
-  markers: [],
-};
-const MAX_FILE = 10 * 1024 * 1024;
-const allowed = new Set(["image/png", "image/jpeg", "image/webp"]);
-const idPattern = /^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)+$/;
-const uid = (prefix: string) => `${prefix}.${crypto.randomUUID().slice(0, 8)}`;
+});
+const uid = (prefix: string) =>
+  `${prefix}.${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
 
 function IconButton({
   label,
@@ -146,111 +138,124 @@ function Field({
     </label>
   );
 }
-function Empty({
-  icon: Icon,
+function Diagnostics({ values }: { values: Diagnostic[] }) {
+  if (!values.length) return null;
+  return (
+    <div className="diagnostics" role="status">
+      <b>Validation</b>
+      {values.map((d, i) => (
+        <p key={`${d.code}-${d.path}-${i}`}>
+          ● {d.code} · {d.path} — {d.message}
+        </p>
+      ))}
+    </div>
+  );
+}
+function Title({
+  code,
   title,
-  body,
-  action,
+  text,
+  children,
 }: {
-  icon: typeof Image;
+  code: string;
   title: string;
-  body: string;
-  action?: React.ReactNode;
+  text: string;
+  children?: ReactNode;
 }) {
   return (
-    <div className="empty">
-      <Icon />
-      <strong>{title}</strong>
-      <p>{body}</p>
-      {action}
+    <div className="workspace-title">
+      <div>
+        <span>{code}</span>
+        <h1>{title}</h1>
+        <p>{text}</p>
+      </div>
+      <div className="actions">{children}</div>
     </div>
   );
 }
 
 export function App() {
-  const [view, setView] = useState<View>("npcs");
-  const [draft, setDraft] = useState<Draft>(() => {
-    try {
-      return (
-        JSON.parse(
-          localStorage.getItem("mythos.content-studio.draft") || "null",
-        ) || initial
-      );
-    } catch {
-      return initial;
-    }
-  });
-  const [selectedNpc, setSelectedNpc] = useState(
-    draft.npcs[0]?.npc_record_id || "",
+  const [history, setHistory] = useState(
+    () => new CommandHistory(initialWorkspace()),
   );
+  const [workspace, setWorkspace] = useState(() => history.value);
+  const [view, setView] = useState<View>("npcs");
+  const [selectedNpc, setSelectedNpc] = useState(
+    workspace.npcs[0]?.npc_record_id ?? "",
+  );
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const [storageMessage, setStorageMessage] = useState("Opening local draft…");
   const [sidebar, setSidebar] = useState(false);
-  const [past, setPast] = useState<Draft[]>([]);
-  const [future, setFuture] = useState<Draft[]>([]);
-  const current =
-    draft.npcs.find((n) => n.npc_record_id === selectedNpc) || draft.npcs[0];
+
   useEffect(() => {
-    const safe = {
-      ...draft,
-      assets: draft.assets.map((a) => ({ ...a, url: "" })),
+    let live = true;
+    void draftAdapter
+      .load(DRAFT_KEY)
+      .then((saved) => {
+        if (!live) return;
+        const next = saved ?? initialWorkspace();
+        setHistory(new CommandHistory(next));
+        setWorkspace(next);
+        setSelectedNpc(next.npcs[0]?.npc_record_id ?? "");
+        setStorageMessage(saved ? "Draft reopened locally" : "New local draft");
+      })
+      .catch(() => {
+        if (live)
+          setStorageMessage("Draft data was malformed; recovered safely");
+      });
+    return () => {
+      live = false;
     };
-    localStorage.setItem("mythos.content-studio.draft", JSON.stringify(safe));
-  }, [draft]);
-  const change = (next: Draft) => {
-    setPast((p) => [...p.slice(-29), draft]);
-    setFuture([]);
-    setDraft(next);
-  };
-  const undo = () => {
-    const prev = past.at(-1);
-    if (!prev) return;
-    setFuture((f) => [draft, ...f]);
-    setDraft(prev);
-    setPast((p) => p.slice(0, -1));
-  };
-  const redo = () => {
-    const next = future[0];
-    if (!next) return;
-    setPast((p) => [...p, draft]);
-    setDraft(next);
-    setFuture((f) => f.slice(1));
-  };
-  const updateNpc = (patch: Partial<Npc>) =>
-    current &&
-    change({
-      ...draft,
-      npcs: draft.npcs.map((n) => (n === current ? { ...n, ...patch } : n)),
-    });
-  const createNpc = () => {
-    let id = uid("mythos.npc");
-    while (draft.npcs.some((n) => n.npc_record_id === id))
-      id = uid("mythos.npc");
-    const n = initialNpc(id);
-    change({ ...draft, npcs: [...draft.npcs, n] });
-    setSelectedNpc(id);
-  };
-  const duplicate = () => {
-    if (!current) return;
-    const id = uid("mythos.npc");
-    change({
-      ...draft,
-      npcs: [
-        ...draft.npcs,
-        {
-          ...current,
-          npc_record_id: id,
-          display_name: `${current.display_name} copy`,
-          visual: { ...current.visual, options: { ...current.visual.options } },
-        },
-      ],
-    });
-    setSelectedNpc(id);
-  };
-  const removeNpc = () => {
-    if (!current) return;
-    const rest = draft.npcs.filter((n) => n !== current);
-    change({ ...draft, npcs: rest });
-    setSelectedNpc(rest[0]?.npc_record_id || "");
-  };
+  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(
+      () =>
+        void draftAdapter
+          .save(DRAFT_KEY, workspace)
+          .then(() => setStorageMessage("Draft saved locally"))
+          .catch(() => setStorageMessage("Draft storage failed")),
+      150,
+    );
+    return () => clearTimeout(timer);
+  }, [workspace]);
+  useEffect(() => {
+    let live = true;
+    const created: string[] = [];
+    void Promise.all(
+      workspace.assets.map(async (asset) => {
+        const bytes = await byteAdapter.load(DRAFT_KEY, asset.id);
+        if (!bytes || !live) return null;
+        const url = URL.createObjectURL(
+          new Blob([bytes.slice()], { type: asset.media_type }),
+        );
+        created.push(url);
+        return [asset.id, url] as const;
+      }),
+    )
+      .then((pairs) => {
+        if (live)
+          setUrls(
+            Object.fromEntries(
+              pairs.filter((x): x is readonly [string, string] => x !== null),
+            ),
+          );
+      })
+      .catch(() => {
+        if (live) setStorageMessage("Raster storage failed");
+      });
+    return () => {
+      live = false;
+      created.forEach(URL.revokeObjectURL);
+    };
+  }, [workspace.assets]);
+  const change = (update: (value: AuthoringWorkspace) => AuthoringWorkspace) =>
+    setWorkspace(history.execute(update));
+  const diagnostics = useMemo(
+    () => exportReadinessDiagnostics(workspace),
+    [workspace],
+  );
+  const undo = () => setWorkspace(history.undo());
+  const redo = () => setWorkspace(history.redo());
   const nav = [
     ["npcs", "NPCs", Users],
     ["assets", "Character Assets", FileImage],
@@ -262,8 +267,8 @@ export function App() {
       <header>
         <button
           className="mobile-menu"
-          onClick={() => setSidebar(true)}
           aria-label="Open navigation"
+          onClick={() => setSidebar(true)}
         >
           <Menu />
         </button>
@@ -275,22 +280,23 @@ export function App() {
           </div>
         </div>
         <div className="history">
-          <IconButton label="Undo" disabled={!past.length} onClick={undo}>
+          <IconButton label="Undo" disabled={!history.canUndo} onClick={undo}>
             <Undo2 />
           </IconButton>
-          <IconButton label="Redo" disabled={!future.length} onClick={redo}>
+          <IconButton label="Redo" disabled={!history.canRedo} onClick={redo}>
             <Redo2 />
           </IconButton>
           <span>
-            <Save /> Draft saved locally
+            <Save />
+            {storageMessage}
           </span>
         </div>
       </header>
       <aside className={sidebar ? "open" : ""}>
         <button
           className="close-nav"
-          onClick={() => setSidebar(false)}
           aria-label="Close navigation"
+          onClick={() => setSidebar(false)}
         >
           <X />
         </button>
@@ -310,115 +316,100 @@ export function App() {
           ))}
         </nav>
         <div className="boundary">
-          <strong>Authoring workspace</strong>
+          <strong>AuthoringWorkspace</strong>
           <span>Preview only · No runtime entities</span>
         </div>
       </aside>
       {sidebar && (
         <button
           className="scrim"
-          onClick={() => setSidebar(false)}
           aria-label="Close navigation"
+          onClick={() => setSidebar(false)}
         />
       )}
       <main>
         {view === "npcs" && (
-          <NpcWorkspace
-            draft={draft}
-            current={current}
+          <NpcView
+            workspace={workspace}
             selected={selectedNpc}
-            setSelected={setSelectedNpc}
-            create={createNpc}
-            duplicate={duplicate}
-            remove={removeNpc}
-            update={updateNpc}
+            select={setSelectedNpc}
+            change={change}
           />
-        )}{" "}
-        {view === "assets" && <AssetWorkspace draft={draft} change={change} />}{" "}
-        {view === "maps" && <MapWorkspace draft={draft} change={change} />}{" "}
-        {view === "package" && <PackageWorkspace draft={draft} />}
+        )}
+        {view === "assets" && (
+          <AssetView
+            workspace={workspace}
+            urls={urls}
+            change={change}
+            report={setStorageMessage}
+          />
+        )}
+        {view === "maps" && (
+          <MapView workspace={workspace} urls={urls} change={change} />
+        )}
+        {view === "package" && (
+          <PackageView workspace={workspace} diagnostics={diagnostics} />
+        )}
       </main>
     </div>
   );
 }
 
-function WorkspaceTitle({
-  eyebrow,
-  title,
-  description,
-  actions,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  actions?: ReactNode;
-}) {
-  return (
-    <div className="workspace-title">
-      <div>
-        <span>{eyebrow}</span>
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-      <div className="actions">{actions}</div>
-    </div>
-  );
-}
-function NpcWorkspace({
-  draft,
-  current,
+function NpcView({
+  workspace,
   selected,
-  setSelected,
-  create,
-  duplicate,
-  remove,
-  update,
+  select,
+  change,
 }: {
-  draft: Draft;
-  current?: Npc;
+  workspace: AuthoringWorkspace;
   selected: string;
-  setSelected: (s: string) => void;
-  create: () => void;
-  duplicate: () => void;
-  remove: () => void;
-  update: (p: Partial<Npc>) => void;
+  select: (id: string) => void;
+  change: (fn: (w: AuthoringWorkspace) => AuthoringWorkspace) => void;
 }) {
-  const diagnostics = current
-    ? [
-        ...(!idPattern.test(current.npc_record_id)
-          ? ["Use a lowercase namespaced authoring ID."]
-          : []),
-        ...(!current.display_name.trim() ? ["Display name is required."] : []),
-        ...(draft.npcs.filter((n) => n.npc_record_id === current.npc_record_id)
-          .length > 1
-          ? ["Authoring ID must be unique."]
-          : []),
-      ]
-    : [];
+  const current =
+    workspace.npcs.find((n) => n.npc_record_id === selected) ??
+    workspace.npcs[0];
+  const issues = current ? validateNpc(current) : [];
+  const create = () => {
+    const npc = structuredClone(
+      workspace.npcs[0] ?? initialWorkspace().npcs[0],
+    );
+    npc.npc_record_id = uid("mythos.npc");
+    npc.display_name = "Untitled NPC";
+    change((w) => ({ ...w, npcs: [...w.npcs, npc] }));
+    select(npc.npc_record_id);
+  };
+  const update = (patch: Partial<NonNullable<typeof current>>) =>
+    current &&
+    change((w) => ({
+      ...w,
+      npcs: w.npcs.map((n) =>
+        n.npc_record_id === current.npc_record_id ? { ...n, ...patch } : n,
+      ),
+    }));
   return (
     <>
-      <WorkspaceTitle
-        eyebrow="DATA-002"
+      <Title
+        code="DATA-002"
         title="NPC authoring"
-        description="Create setting-independent content records and connect them to visual manifests."
-        actions={
-          <button className="primary" onClick={create}>
-            <Plus />
-            New NPC
-          </button>
-        }
-      />
+        text="Structured authoring records validated by the domain service."
+      >
+        <button className="primary" onClick={create}>
+          <Plus />
+          New NPC
+        </button>
+      </Title>
       <div className="split">
         <section className="list-panel">
           <div className="panel-heading">
             <b>Records</b>
-            <span>{draft.npcs.length}</span>
+            <span>{workspace.npcs.length}</span>
           </div>
-          {draft.npcs.map((n) => (
+          {workspace.npcs.map((n) => (
             <button
-              className={`record ${selected === n.npc_record_id ? "selected" : ""}`}
+              className={`record ${n.npc_record_id === current?.npc_record_id ? "selected" : ""}`}
               key={n.npc_record_id}
-              onClick={() => setSelected(n.npc_record_id)}
+              onClick={() => select(n.npc_record_id)}
             >
               <span className="avatar">
                 {n.display_name.slice(0, 2).toUpperCase()}
@@ -431,39 +422,28 @@ function NpcWorkspace({
           ))}
         </section>
         <section className="editor-panel">
-          {!current ? (
-            <Empty
-              icon={Users}
-              title="No NPC records"
-              body="Create a record to begin authoring."
-              action={
-                <button className="primary" onClick={create}>
-                  <Plus />
-                  New NPC
-                </button>
-              }
-            />
-          ) : (
+          {current && (
             <>
               <div className="panel-heading">
                 <div>
                   <b>{current.display_name || "Unnamed NPC"}</b>
-                  <span
-                    className={diagnostics.length ? "status error" : "status"}
-                  >
-                    {diagnostics.length
-                      ? `${diagnostics.length} issues`
-                      : "Valid draft"}
+                  <span className={issues.length ? "status error" : "status"}>
+                    {issues.length ? `${issues.length} issues` : "Valid draft"}
                   </span>
                 </div>
-                <div>
-                  <IconButton label="Duplicate NPC" onClick={duplicate}>
-                    <Copy />
-                  </IconButton>
-                  <IconButton label="Delete NPC" onClick={remove}>
-                    <Trash2 />
-                  </IconButton>
-                </div>
+                <IconButton
+                  label="Delete NPC"
+                  onClick={() =>
+                    change((w) => ({
+                      ...w,
+                      npcs: w.npcs.filter(
+                        (n) => n.npc_record_id !== current.npc_record_id,
+                      ),
+                    }))
+                  }
+                >
+                  <Trash2 />
+                </IconButton>
               </div>
               <div className="form-grid">
                 <Field label="Display name">
@@ -474,55 +454,20 @@ function NpcWorkspace({
                 </Field>
                 <Field
                   label="Authoring ID"
-                  hint="Immutable after first export; never a runtime Entity ID."
+                  hint="Stable content identity; never a runtime Entity ID."
                 >
                   <input
                     value={current.npc_record_id}
                     onChange={(e) => {
-                      const old = current.npc_record_id;
-                      update({ npc_record_id: e.target.value });
-                      if (selected === old) setSelected(e.target.value);
+                      const id = e.target.value;
+                      update({ npc_record_id: id });
+                      select(id);
                     }}
                   />
                 </Field>
-                <Field label="Sprite manifest package">
+                <Field label="Tags">
                   <input
-                    value={current.visual.sprite_manifest.package_id}
-                    onChange={(e) =>
-                      update({
-                        visual: {
-                          ...current.visual,
-                          sprite_manifest: {
-                            ...current.visual.sprite_manifest,
-                            package_id: e.target.value,
-                          },
-                        },
-                      })
-                    }
-                  />
-                </Field>
-                <Field label="Sprite manifest record">
-                  <input
-                    value={current.visual.sprite_manifest.record_id}
-                    onChange={(e) =>
-                      update({
-                        visual: {
-                          ...current.visual,
-                          sprite_manifest: {
-                            ...current.visual.sprite_manifest,
-                            record_id: e.target.value,
-                          },
-                        },
-                      })
-                    }
-                  />
-                </Field>
-                <Field
-                  label="Tags"
-                  hint="Comma-separated, unique namespaced tags."
-                >
-                  <input
-                    value={current.tags.join(", ")}
+                    value={(current.tags ?? []).join(", ")}
                     onChange={(e) =>
                       update({
                         tags: [
@@ -532,32 +477,23 @@ function NpcWorkspace({
                               .map((x) => x.trim())
                               .filter(Boolean),
                           ),
-                        ].sort(),
+                        ].sort(ordinalCompare),
                       })
                     }
                   />
                 </Field>
-                <Field label="Author notes">
+                <Field label="Notes">
                   <textarea
                     rows={5}
-                    value={current.notes}
+                    value={current.notes ?? ""}
                     onChange={(e) => update({ notes: e.target.value })}
                   />
                 </Field>
               </div>
-              {diagnostics.length > 0 && (
-                <div className="diagnostics">
-                  <b>Validation</b>
-                  {diagnostics.map((d) => (
-                    <p key={d}>● {d}</p>
-                  ))}
-                </div>
-              )}
+              <Diagnostics values={issues} />
               <details className="json">
-                <summary>Deterministic JSON preview</summary>
-                <pre>
-                  {JSON.stringify(current, Object.keys(current).sort(), 2)}
-                </pre>
+                <summary>Canonical JSON preview</summary>
+                <pre>{canonicalJson(current)}</pre>
               </details>
             </>
           )}
@@ -567,234 +503,182 @@ function NpcWorkspace({
   );
 }
 
-async function readImages(files: FileList): Promise<Asset[]> {
-  const out: Asset[] = [];
-  for (const file of [...files]) {
-    if (!allowed.has(file.type) || file.size > MAX_FILE)
-      throw new Error(`${file.name}: only PNG, JPEG, or WebP up to 10 MB`);
-    const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-    const png =
-      bytes[0] === 137 && bytes[1] === 80 && bytes[2] === 78 && bytes[3] === 71;
-    const jpeg = bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
-    const webp =
-      String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
-      String.fromCharCode(...bytes.slice(8, 12)) === "WEBP";
-    if (!(png || jpeg || webp))
-      throw new Error(
-        `${file.name}: file signature does not match an allowed raster format`,
-      );
-    const url = URL.createObjectURL(file);
+async function decodeCandidate(
+  file: File,
+  path: string,
+): Promise<RasterImportCandidate> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const url = URL.createObjectURL(file);
+  try {
     const dimensions = await new Promise<{ width: number; height: number }>(
       (resolve, reject) => {
-        const img = new window.Image();
-        img.onload = () =>
-          resolve({ width: img.naturalWidth, height: img.naturalHeight });
-        img.onerror = reject;
-        img.src = url;
+        const image = new window.Image();
+        image.onload = () =>
+          resolve({ width: image.naturalWidth, height: image.naturalHeight });
+        image.onerror = () => reject(new Error("media.decode-failed"));
+        image.src = url;
       },
     );
-    if (dimensions.width > 4096 || dimensions.height > 4096) {
-      URL.revokeObjectURL(url);
-      throw new Error(`${file.name}: dimensions exceed 4096 × 4096`);
-    }
-    out.push({
-      id: uid("asset.image"),
+    return {
+      id: uid("mythos.asset"),
       name: file.name,
-      path: `assets/characters/${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`,
-      url,
       type: file.type,
-      size: file.size,
+      bytes,
+      path,
       ...dimensions,
-    });
+    };
+  } finally {
+    URL.revokeObjectURL(url);
   }
-  return out;
 }
-function Uploader({
-  onFiles,
-  label = "Import images",
+function AssetView({
+  workspace,
+  urls,
+  change,
+  report,
 }: {
-  onFiles: (a: Asset[]) => void;
-  label?: string;
+  workspace: AuthoringWorkspace;
+  urls: Record<string, string>;
+  change: (fn: (w: AuthoringWorkspace) => AuthoringWorkspace) => void;
+  report: (value: string) => void;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
-  const pick = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
+  const pick = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = [...(event.target.files ?? [])];
+    event.target.value = "";
     try {
+      const proposed = await Promise.all(
+        files.map((file) =>
+          decodeCandidate(
+            file,
+            `assets/characters/${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`,
+          ),
+        ),
+      );
+      const result = validateRasterBatch(proposed, workspace.assets);
+      if (!result.accepted) throw new Error(result.diagnostics.join("; "));
+      const values = new globalThis.Map(
+        proposed.map((item) => [item.id, item.bytes] as const),
+      );
+      await byteAdapter.saveBatch(DRAFT_KEY, values);
+      const metadata: AssetMetadata[] = proposed.map(
+        ({ id, path, type, bytes, width, height }) => ({
+          id,
+          path,
+          media_type: type as AssetMetadata["media_type"],
+          size: bytes.byteLength,
+          width,
+          height,
+        }),
+      );
+      change((w) => ({
+        ...w,
+        assets: [...w.assets, ...metadata],
+        sprites: w.sprites.map((s, si) =>
+          si
+            ? s
+            : {
+                ...s,
+                layers: [
+                  ...s.layers,
+                  ...metadata.map((a, i) => ({
+                    layer_id: uid("mythos.layer"),
+                    display_name: a.path.split("/").at(-1) ?? a.id,
+                    order: s.layers.length + i,
+                    asset: ref(a.id),
+                  })),
+                ],
+              },
+        ),
+      }));
       setError("");
-      onFiles(await readImages(e.target.files));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed");
+      report("Raster batch saved locally");
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Import failed atomically",
+      );
     }
-    e.target.value = "";
+  };
+  const sorted = [...workspace.sprites[0].layers].sort(
+    (a, b) => a.order - b.order || ordinalCompare(a.layer_id, b.layer_id),
+  );
+  const reorder = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= sorted.length) return;
+    const copy = [...sorted];
+    [copy[index], copy[target]] = [copy[target], copy[index]];
+    change((w) => ({
+      ...w,
+      sprites: w.sprites.map((s, i) =>
+        i ? s : { ...s, layers: copy.map((l, order) => ({ ...l, order })) },
+      ),
+    }));
   };
   return (
     <>
-      <button className="primary" onClick={() => ref.current?.click()}>
-        <Plus />
-        {label}
-      </button>
-      <input
-        ref={ref}
-        hidden
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        multiple
-        onChange={pick}
-      />
-      {error && (
-        <span className="inline-error" role="alert">
-          {error}
-        </span>
-      )}
-    </>
-  );
-}
-function reorder<T extends { order: number }>(
-  items: T[],
-  index: number,
-  delta: number,
-) {
-  const sorted = [...items].sort((a, b) => a.order - b.order);
-  const target = index + delta;
-  if (target < 0 || target >= sorted.length) return items;
-  [sorted[index], sorted[target]] = [sorted[target], sorted[index]];
-  return sorted.map((x, i) => ({ ...x, order: i }));
-}
-function AssetWorkspace({
-  draft,
-  change,
-}: {
-  draft: Draft;
-  change: (d: Draft) => void;
-}) {
-  const add = (assets: Asset[]) =>
-    change({
-      ...draft,
-      assets: [...draft.assets, ...assets],
-      characterLayers: [
-        ...draft.characterLayers,
-        ...assets.map((a, i) => ({
-          layer_id: uid("layer.character"),
-          display_name: a.name,
-          order: draft.characterLayers.length + i,
-          assetId: a.id,
-          visible: true,
-          locked: false,
-        })),
-      ],
-    });
-  return (
-    <>
-      <WorkspaceTitle
-        eyebrow="DATA-003"
+      <Title
+        code="DATA-003"
         title="Character assets"
-        description="Order safe raster layers into a non-authoritative visual manifest preview."
-        actions={<Uploader onFiles={add} />}
-      />
+        text="Safe raster ingestion and non-authoritative ordinal layer preview."
+      >
+        <button className="primary" onClick={() => input.current?.click()}>
+          <Plus />
+          Import images
+        </button>
+        <input
+          ref={input}
+          hidden
+          multiple
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={pick}
+        />
+      </Title>
+      {error && (
+        <div className="diagnostics" role="alert">
+          {error}
+        </div>
+      )}
       <div className="canvas-layout">
         <section className="layer-panel">
           <div className="panel-heading">
             <b>Visual layers</b>
-            <span>{draft.characterLayers.length}</span>
+            <span>{sorted.length}</span>
           </div>
-          {!draft.characterLayers.length ? (
-            <Empty
-              icon={FileImage}
-              title="No visual layers"
-              body="Import PNG, JPEG, or WebP images to create ordered layers."
-            />
-          ) : (
-            draft.characterLayers
-              .sort((a, b) => a.order - b.order)
-              .map((l, i) => (
-                <LayerRow
-                  key={l.layer_id}
-                  layer={l}
-                  up={() =>
-                    change({
-                      ...draft,
-                      characterLayers: reorder(draft.characterLayers, i, -1),
-                    })
-                  }
-                  down={() =>
-                    change({
-                      ...draft,
-                      characterLayers: reorder(draft.characterLayers, i, 1),
-                    })
-                  }
-                  patch={(p) =>
-                    change({
-                      ...draft,
-                      characterLayers: draft.characterLayers.map((x) =>
-                        x === l ? { ...x, ...p } : x,
-                      ),
-                    })
-                  }
-                />
-              ))
-          )}
+          {sorted.map((layer, i) => (
+            <div className="layer-row" key={layer.layer_id}>
+              <span className="drag">{i + 1}</span>
+              <span>
+                <b>{layer.display_name}</b>
+                <small>{layer.asset.record_id}</small>
+              </span>
+              <IconButton label="Move layer up" onClick={() => reorder(i, -1)}>
+                <ChevronUp />
+              </IconButton>
+              <IconButton label="Move layer down" onClick={() => reorder(i, 1)}>
+                <ChevronDown />
+              </IconButton>
+            </div>
+          ))}
         </section>
         <Preview
           title="Character composition"
-          layers={draft.characterLayers}
-          assets={draft.assets}
+          ids={sorted.map((l) => l.asset.record_id)}
+          urls={urls}
         />
       </div>
     </>
   );
 }
-function LayerRow({
-  layer,
-  up,
-  down,
-  patch,
-}: {
-  layer: VisualLayer;
-  up: () => void;
-  down: () => void;
-  patch: (p: Partial<VisualLayer>) => void;
-}) {
-  return (
-    <div className="layer-row">
-      <span className="drag">{layer.order + 1}</span>
-      <span>
-        <b>{layer.display_name}</b>
-        <small>{layer.layer_id}</small>
-      </span>
-      <IconButton label="Move layer up" onClick={up}>
-        <ChevronUp />
-      </IconButton>
-      <IconButton label="Move layer down" onClick={down}>
-        <ChevronDown />
-      </IconButton>
-      <IconButton
-        label={layer.visible ? "Hide layer" : "Show layer"}
-        onClick={() => patch({ visible: !layer.visible })}
-      >
-        {layer.visible ? <Eye /> : <EyeOff />}
-      </IconButton>
-      <IconButton
-        label={layer.locked ? "Unlock layer" : "Lock layer"}
-        onClick={() => patch({ locked: !layer.locked })}
-      >
-        {layer.locked ? <Lock /> : <Unlock />}
-      </IconButton>
-    </div>
-  );
-}
 function Preview({
   title,
-  layers,
-  assets,
-  map = false,
-  background,
+  ids,
+  urls,
 }: {
   title: string;
-  layers: (VisualLayer | MapLayer)[];
-  assets: Asset[];
-  map?: boolean;
-  background?: string;
+  ids: string[];
+  urls: Record<string, string>;
 }) {
   return (
     <section className="preview-panel">
@@ -804,361 +688,154 @@ function Preview({
           <span className="status muted">Approximation · Studio only</span>
         </div>
       </div>
-      <div className={`preview ${map ? "map-preview" : ""}`}>
-        {background && (
-          <img
-            className="background"
-            src={assets.find((a) => a.id === background)?.url}
-          />
-        )}{" "}
-        {layers
-          .filter((l) => l.visible)
-          .sort(
-            (a, b) => a.order - b.order || a.layer_id.localeCompare(b.layer_id),
-          )
-          .map((l) => {
-            const a = assets.find((x) => x.id === l.assetId);
-            if (!a?.url) return null;
-            const m = l as MapLayer;
-            return (
-              <img
-                key={l.layer_id}
-                src={a.url}
-                alt=""
-                style={
-                  map
-                    ? {
-                        transform: `translate(${m.x}px,${m.y}px) rotate(${m.rotation}deg) scale(${m.scale})`,
-                        opacity: m.opacity,
-                      }
-                    : {}
-                }
-              />
-            );
-          })}
-        {!background &&
-          !layers.some(
-            (l) => l.visible && assets.find((a) => a.id === l.assetId)?.url,
-          ) && (
-            <div className="canvas-empty">
-              <Image />
-              <span>Preview appears here</span>
-            </div>
-          )}
+      <div className="preview">
+        {ids.map((id) =>
+          urls[id] ? (
+            <img key={id} src={urls[id]} alt="Imported raster preview" />
+          ) : null,
+        )}
+        {!ids.some((id) => urls[id]) && (
+          <div className="canvas-empty">
+            <Image />
+            <span>Preview appears here</span>
+          </div>
+        )}
       </div>
     </section>
   );
 }
-
-function MapWorkspace({
-  draft,
+function MapView({
+  workspace,
+  urls,
   change,
 }: {
-  draft: Draft;
-  change: (d: Draft) => void;
+  workspace: AuthoringWorkspace;
+  urls: Record<string, string>;
+  change: (fn: (w: AuthoringWorkspace) => AuthoringWorkspace) => void;
 }) {
-  const add = (assets: Asset[]) => {
-    const all = [...draft.assets, ...assets];
-    const bg = draft.mapBackground || assets[0]?.id || "";
-    const layerAssets = draft.mapBackground ? assets : assets.slice(1);
-    change({
-      ...draft,
-      assets: all,
-      mapBackground: bg,
-      mapLayers: [
-        ...draft.mapLayers,
-        ...layerAssets.map((a, i) => ({
-          layer_id: uid("layer.map"),
-          display_name: a.name,
-          order: draft.mapLayers.length + i,
-          assetId: a.id,
-          visible: true,
-          locked: false,
-          x: 0,
-          y: 0,
-          scale: 1,
-          rotation: 0,
-          opacity: 1,
-        })),
-      ],
-    });
-  };
-  const addMarker = () =>
-    change({
-      ...draft,
-      markers: [
-        ...draft.markers,
-        {
-          marker_id: uid("marker.reference"),
-          kind: "reference",
-          display_name: "Reference marker",
-          x: 50,
-          y: 50,
-        },
-      ],
-    });
+  const map = workspace.maps[0];
+  const setBackground = (id: string) =>
+    change((w) => ({
+      ...w,
+      maps: w.maps.map((m, i) => (i ? m : { ...m, background_asset: ref(id) })),
+    }));
   return (
     <>
-      <WorkspaceTitle
-        eyebrow="DATA-004"
+      <Title
+        code="DATA-004"
         title="Layered maps"
-        description="Compose a background, visual layers, and generic dimensionless markers."
-        actions={
-          <>
-            <Uploader onFiles={add} label="Import map images" />
-            <button onClick={addMarker}>
-              <Plus />
-              Add marker
-            </button>
-          </>
-        }
+        text="Dimensionless preview composition; no runtime or world-coordinate meaning."
       />
       <div className="canvas-layout">
-        <section className="layer-panel scroll">
+        <section className="layer-panel">
           <div className="panel-heading">
             <b>Composition</b>
           </div>
-          <Field label="Background">
-            {draft.assets.length ? (
+          <div className="form-grid">
+            <Field label="Background raster">
               <select
-                value={draft.mapBackground}
-                onChange={(e) =>
-                  change({ ...draft, mapBackground: e.target.value })
-                }
+                value={map.background_asset.record_id}
+                onChange={(e) => setBackground(e.target.value)}
               >
-                <option value="">Select raster…</option>
-                {draft.assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
+                <option value="mythos.missing-background">
+                  Select raster…
+                </option>
+                {workspace.assets.map((a) => (
+                  <option value={a.id} key={a.id}>
+                    {a.path}
                   </option>
                 ))}
               </select>
-            ) : (
-              <small>Import a raster background first.</small>
-            )}
-          </Field>
-          {draft.mapLayers
-            .sort((a, b) => a.order - b.order)
-            .map((l, i) => (
-              <div key={l.layer_id}>
-                <LayerRow
-                  layer={l}
-                  up={() =>
-                    change({
-                      ...draft,
-                      mapLayers: reorder(draft.mapLayers, i, -1),
-                    })
-                  }
-                  down={() =>
-                    change({
-                      ...draft,
-                      mapLayers: reorder(draft.mapLayers, i, 1),
-                    })
-                  }
-                  patch={(p) =>
-                    change({
-                      ...draft,
-                      mapLayers: draft.mapLayers.map((x) =>
-                        x === l ? { ...x, ...p } : x,
-                      ),
-                    })
-                  }
-                />
-                <div className="transform-grid">
-                  {(["x", "y", "scale", "rotation", "opacity"] as const).map(
-                    (k) => (
-                      <Field key={k} label={k}>
-                        <input
-                          type="number"
-                          step={k === "opacity" ? "0.1" : "1"}
-                          value={l[k]}
-                          disabled={l.locked}
-                          onChange={(e) =>
-                            change({
-                              ...draft,
-                              mapLayers: draft.mapLayers.map((x) =>
-                                x === l
-                                  ? { ...x, [k]: Number(e.target.value) }
-                                  : x,
-                              ),
-                            })
-                          }
-                        />
-                      </Field>
-                    ),
-                  )}
-                </div>
-              </div>
-            ))}
-          <div className="panel-heading">
-            <b>Markers</b>
-            <span>{draft.markers.length}</span>
+            </Field>
           </div>
-          {draft.markers.map((m) => (
-            <div className="marker" key={m.marker_id}>
-              <select
-                value={m.kind}
-                onChange={(e) =>
-                  change({
-                    ...draft,
-                    markers: draft.markers.map((x) =>
-                      x === m
-                        ? { ...x, kind: e.target.value as Marker["kind"] }
-                        : x,
-                    ),
-                  })
-                }
-              >
-                <option>region</option>
-                <option>spawn</option>
-                <option>reference</option>
-              </select>
-              <input
-                value={m.display_name}
-                onChange={(e) =>
-                  change({
-                    ...draft,
-                    markers: draft.markers.map((x) =>
-                      x === m ? { ...x, display_name: e.target.value } : x,
-                    ),
-                  })
-                }
-              />
-              <IconButton
-                label="Delete marker"
-                onClick={() =>
-                  change({
-                    ...draft,
-                    markers: draft.markers.filter((x) => x !== m),
-                  })
-                }
-              >
-                <Trash2 />
-              </IconButton>
-            </div>
-          ))}
+          <Diagnostics
+            values={validateWorkspace(workspace).filter(
+              (d) => d.document_id === map.map_manifest_id,
+            )}
+          />
         </section>
         <Preview
-          map
           title="Layered map preview"
-          layers={draft.mapLayers}
-          assets={draft.assets}
-          background={draft.mapBackground}
+          ids={[
+            map.background_asset.record_id,
+            ...map.layers.map((l) => l.asset.record_id),
+          ]}
+          urls={urls}
         />
       </div>
     </>
   );
 }
-function PackageWorkspace({ draft }: { draft: Draft }) {
-  const issues = [
-    ...draft.npcs.flatMap((n) =>
-      !idPattern.test(n.npc_record_id)
-        ? [`${n.display_name}: invalid authoring ID`]
-        : [],
-    ),
-    ...(!draft.mapBackground ? ["Map background is not selected"] : []),
-    ...(draft.assets.some((a) => !allowed.has(a.type))
-      ? ["Unsupported asset media type"]
-      : []),
-  ];
-  const inventory = [
-    ...draft.npcs.map((n) => ({
-      kind: "npc",
-      id: n.npc_record_id,
-      path: `records/npcs/${n.npc_record_id}.json`,
-    })),
-    ...draft.assets.map((a) => ({ kind: "asset", id: a.id, path: a.path })),
-  ].sort(
-    (a, b) =>
-      a.kind.localeCompare(b.kind) ||
-      a.id.localeCompare(b.id) ||
-      a.path.localeCompare(b.path),
-  );
-  const exportJson = () => {
-    const payload = {
-      document_kind: "mythos.content-package",
-      schema_version: "1.0",
-      package_id: PACKAGE_ID,
-      package_version: "0.1.0",
-      display_name: "Local workspace",
-      entries: inventory,
-      dependencies: [],
-      extensions: {},
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], {
-      type: "application/json",
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "package.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
+function PackageView({
+  workspace,
+  diagnostics,
+}: {
+  workspace: AuthoringWorkspace;
+  diagnostics: Diagnostic[];
+}) {
+  const [message, setMessage] = useState("");
+  const ready = !diagnostics.some((item) => item.severity === "error");
+  const download = async () => {
+    try {
+      const result = await assembleExportBundle(
+        workspace,
+        DRAFT_KEY,
+        byteAdapter,
+      );
+      const url = URL.createObjectURL(
+        new Blob([result.bytes.slice()], { type: BUNDLE_MEDIA_TYPE }),
+      );
+      try {
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `${workspace.package.package_id}.mythos-bundle.json`;
+        anchor.click();
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+      setMessage(
+        `Complete bundle: ${result.bundle.files.length} files, ${result.bytes.byteLength} bytes.`,
+      );
+    } catch (reason) {
+      setMessage(
+        reason instanceof Error ? reason.message : "Export failed atomically",
+      );
+    }
   };
   return (
     <>
-      <WorkspaceTitle
-        eyebrow="DATA-001"
-        title="Package readiness"
-        description="Inspect deterministic inventory and resolve blocking diagnostics before export."
-        actions={
-          <button
-            className="primary"
-            disabled={issues.length > 0}
-            onClick={exportJson}
-          >
-            <Download />
-            Export package.json
-          </button>
-        }
-      />
-      <div className="package-grid">
-        <section className="summary">
-          <div className={`readiness ${issues.length ? "blocked" : ""}`}>
-            <Archive />
-            <div>
-              <span>
-                {issues.length ? "Export blocked" : "Ready to export"}
-              </span>
-              <b>
-                {issues.length
-                  ? `${issues.length} diagnostic${issues.length === 1 ? "" : "s"}`
-                  : `${inventory.length} declared entries`}
-              </b>
-            </div>
+      <Title
+        code="DATA-001"
+        title="Package export"
+        text="Complete dependency-free bundle with canonical files, actual byte sizes, and SHA-256 integrity."
+      >
+        <button
+          className="primary"
+          disabled={!ready}
+          onClick={() => void download()}
+        >
+          <Download />
+          Export complete bundle
+        </button>
+      </Title>
+      <section className="summary">
+        <div className="panel-heading">
+          <div>
+            <b>Export readiness</b>
+            <span className={ready ? "status" : "status error"}>
+              {ready
+                ? "Ready"
+                : `${diagnostics.filter((d) => d.severity === "error").length} blockers`}
+            </span>
           </div>
-          <h2>Validation diagnostics</h2>
-          {issues.length ? (
-            issues.map((i) => (
-              <p className="diagnostic" key={i}>
-                ● {i}
-              </p>
-            ))
-          ) : (
-            <p className="success">All current structural checks passed.</p>
-          )}
-        </section>
-        <section className="inventory">
-          <div className="panel-heading">
-            <b>Manifest inventory</b>
-            <span>{inventory.length}</span>
-          </div>
-          {inventory.length ? (
-            inventory.map((e) => (
-              <div className="inventory-row" key={`${e.kind}:${e.id}`}>
-                <span>{e.kind}</span>
-                <b>{e.id}</b>
-                <small>{e.path}</small>
-              </div>
-            ))
-          ) : (
-            <Empty
-              icon={Archive}
-              title="Package is empty"
-              body="Create records and import assets to populate the inventory."
-            />
-          )}
-        </section>
-      </div>
+        </div>
+        {message && (
+          <p className="package-note" role="status">
+            {message}
+          </p>
+        )}
+        <Diagnostics values={diagnostics} />
+      </section>
     </>
   );
 }

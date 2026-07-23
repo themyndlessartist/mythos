@@ -26,6 +26,8 @@ All notable changes to Mythos will be documented in this file.
 ### Changed
 
 - Hardened M-001 persistence with ordinal-canonical metadata serialization, strict JSON and partition rejection, pre-deserialization byte limits, full-state round-trip verification, and staged-write atomicity coverage.
+- Remediated Content Studio MVP acceptance blockers: the React UI now consumes `AuthoringWorkspace` domain validation/readiness diagnostics; complete deterministic exports include all records, manifests, and raster bytes with actual sizes and SHA-256 integrity in an explicitly versioned dependency-free bundle.
+- Added versioned draft validation, IndexedDB raster-byte persistence, safe object-URL lifecycle handling, atomic centralized raster ingestion limits/path checks, locale-independent canonical ordering, exact dependency pins, and executable acceptance coverage for export, integrity, correspondence, failure atomicity, persistence, and security cases.
 - Scoped NPC operational validation to the relevant Character profile and Region assignment while retaining single-pass global validation at explicit world-integrity boundaries.
 - Hardened Entity snapshot restoration against undefined lifecycle values, uninitialized identifiers, null collections, invalid timestamp/state combinations, and malformed references using structured failures.
 - Made Entity snapshot collections defensive read-only projections.

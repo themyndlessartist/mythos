@@ -6,6 +6,7 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Approved SYS-013 Organization Framework specification for generic Organization profiles, memberships, and role references.
 - Implemented SYS-012 Property Framework with Entity-authoritative sole ownership, profile classification and lifecycle, deterministic queries, atomic snapshots, optional failure-safe events, and complete-world persistence.
 - Approved SYS-012 Property Framework specification using Entity-owned sole-title links without duplicating authoritative ownership state.
 - Implemented SYS-011 Reputation Framework with audience-scoped bounded assessments, deterministic queries, atomic snapshots, optional failure-safe events, and complete-world persistence.

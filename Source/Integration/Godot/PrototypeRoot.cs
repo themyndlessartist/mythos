@@ -20,6 +20,15 @@ public partial class PrototypeRoot : Node
             return;
         }
 
-        GD.Print($"{Framework.FrameworkAssembly.Name} ready with content package '{import.Value!.PackageId}'.");
+        var bundle = import.Value!;
+        var khaige = new CharacterAuthoringRecordReader().Read(bundle, "mythos-genesis.khaige");
+        if (!khaige.IsSuccess)
+        {
+            GD.PushError($"Genesis character import failed: {khaige.Error!.Code} - {khaige.Error.Message}");
+            GetTree().Quit(1);
+            return;
+        }
+
+        GD.Print($"{Framework.FrameworkAssembly.Name} ready with content package '{bundle.PackageId}' and character '{khaige.Value!.DisplayName}'.");
     }
 }

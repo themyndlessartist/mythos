@@ -47,4 +47,6 @@ public static class ContentImportErrorCodes
     public const string MissingManifest = "content.missing-manifest";
     public const string InventoryMismatch = "content.inventory-mismatch";
     public const string LimitExceeded = "content.limit-exceeded";
+    public const string RecordNotFound = "content.record-not-found";
+    public const string InvalidRecord = "content.invalid-record";
 }

@@ -24,6 +24,8 @@ The importer verifies:
 
 Structured `content.*` failures are returned without exposing a partial bundle. The importer does not create runtime Entities, trust external paths, execute content, fetch dependencies, or interpret title extensions.
 
+The DATA-005 reader independently locates declared `character` entries and validates identity, schema version, display text, tags, notes, passive extension namespaces, and optional visual-reference shape. It returns immutable authoring data and deliberately does not assign a controller, Entity ID, life stage, status, or current world state.
+
 ## Genesis Bootstrap
 
 The source manifest at `Data/TitlePackages/Genesis/Lakewood/package.json` carries only approved title bootstrap facts in the passive `mythos.genesis` extension:
@@ -37,12 +39,12 @@ It now includes Khaige's control-neutral DATA-005 Character authoring record. Th
 
 ## Godot Boundary
 
-`PrototypeRoot` loads the bundled artifact through `Mythos.Content`. Import failure stops the headless run with a structured diagnostic. Success reports the accepted package ID. No title rules or content parsing were added to `Mythos.Framework`.
+`PrototypeRoot` loads the bundled artifact through `Mythos.Content`, then locates and validates Khaige's Character record. Import failure stops the headless run with a structured diagnostic. Success reports the accepted package and character names. No title rules or content parsing were added to `Mythos.Framework`.
 
 ## Verification
 
 - Importer tests cover valid schema 1.0 and 1.1 packages, versioned entry kinds, path traversal, case collisions, tampering, inventory mismatch, and configured limits.
-- The complete C# suite passes with 228 tests.
+- The complete C# suite passes with 231 tests.
 - Framework smoke verification passes.
 - Godot headless editor import and runtime startup pass with `mythos-genesis.lakewood`.
 - Content Studio passes 29 tests, TypeScript checking, lint, and formatting verification.

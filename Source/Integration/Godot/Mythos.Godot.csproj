@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../Core/Mythos.Framework.csproj" />
+    <ProjectReference Include="../../Content/Mythos.Content.csproj" />
   </ItemGroup>
 </Project>

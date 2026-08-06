@@ -109,9 +109,11 @@ This track proceeds alongside framework milestones without changing their scope,
 
 # 9. Phase 6 — First Mythos Title Pre-Production
 
-Status: Planned
+Status: In Progress
 
-- Select first setting
-- Define title-specific scope
-- Build content pipeline
+Milestone: [M-003 Lakewood Vertical Slice](../Milestones/M-003_Lakewood_Vertical_Slice.md)
+
+- Select first setting — **Mythos: Genesis / Lakewood approved**
+- Define title-specific scope — **M-003 in progress**
+- Build content pipeline — **bundle importer in progress**
 - Produce vertical slice

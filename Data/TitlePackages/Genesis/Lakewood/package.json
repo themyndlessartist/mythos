@@ -1,0 +1,17 @@
+{
+  "dependencies": [],
+  "display_name": "Mythos: Genesis - Lakewood Vertical Slice",
+  "document_kind": "mythos.content-package",
+  "entries": [],
+  "extensions": {
+    "mythos.genesis": {
+      "playable_test_character": "khaige",
+      "starting_area": "lakewood",
+      "status": "vertical-slice-bootstrap",
+      "vertical_slice": "settlement-growth"
+    }
+  },
+  "package_id": "mythos-genesis.lakewood",
+  "package_version": "0.1.0",
+  "schema_version": "1.0"
+}

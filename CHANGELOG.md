@@ -6,6 +6,9 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Started M-003 Lakewood Vertical Slice for **Mythos: Genesis**, recording Lakewood, Khaige, settlement growth, scope boundaries, and acceptance criteria.
+- Added the engine-neutral `Mythos.Content` bundle importer with path safety, limits, SHA-256 integrity, package identity, and exact inventory validation.
+- Added a deterministic Genesis/Lakewood bootstrap package, cross-platform bundle generation, Godot startup validation, and importer tests.
 - Implemented SYS-015 Dynamic World Event Framework with persistent situation lifecycle, Region and participant scope, explicit outcomes, canonical state, optional failure-safe notifications, and complete-world persistence.
 - Approved SYS-015 Dynamic World Event Framework specification for persistent world situations, lifecycle, participants, Region scope, and explicit outcomes.
 - Implemented SYS-014 Economy Framework with Entity-owned currency accounts, immutable atomic transfers, ledger-recomputed validation, deterministic queries, optional failure-safe events, and complete-world persistence.

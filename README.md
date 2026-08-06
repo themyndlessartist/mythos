@@ -46,6 +46,8 @@ xUnit is explicitly approved for M-001 test tooling by [ADR-024](Docs/Architectu
 
 Godot integration is located in `Source/Integration/Godot`. Authoritative framework code belongs in `Source/Core` and must remain independent of Godot APIs whenever practical.
 
+The first title-specific milestone is [M-003 Lakewood Vertical Slice](Docs/Milestones/M-003_Lakewood_Vertical_Slice.md). Its source package begins under `Data/TitlePackages/Genesis/Lakewood`; deterministic Godot import artifacts are built with `Scripts/build_content_bundle.mjs`.
+
 Run the complete macOS build and smoke verification with:
 
 ```bash

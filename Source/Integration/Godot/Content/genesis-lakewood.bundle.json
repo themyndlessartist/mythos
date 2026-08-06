@@ -1,0 +1,17 @@
+{
+  "bundle_kind": "mythos.content-bundle",
+  "bundle_version": "1.0",
+  "package_id": "mythos-genesis.lakewood",
+  "files": [
+    {
+      "path": "package.json",
+      "media_type": "application/json",
+      "size": 469,
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "40fcb08b51e3c533693cd83699a8ae4e753007c54941d1d1c63f5169c492d5ab"
+      },
+      "content_base64": "ewogICJkZXBlbmRlbmNpZXMiOiBbXSwKICAiZGlzcGxheV9uYW1lIjogIk15dGhvczogR2VuZXNpcyAtIExha2V3b29kIFZlcnRpY2FsIFNsaWNlIiwKICAiZG9jdW1lbnRfa2luZCI6ICJteXRob3MuY29udGVudC1wYWNrYWdlIiwKICAiZW50cmllcyI6IFtdLAogICJleHRlbnNpb25zIjogewogICAgIm15dGhvcy5nZW5lc2lzIjogewogICAgICAicGxheWFibGVfdGVzdF9jaGFyYWN0ZXIiOiAia2hhaWdlIiwKICAgICAgInN0YXJ0aW5nX2FyZWEiOiAibGFrZXdvb2QiLAogICAgICAic3RhdHVzIjogInZlcnRpY2FsLXNsaWNlLWJvb3RzdHJhcCIsCiAgICAgICJ2ZXJ0aWNhbF9zbGljZSI6ICJzZXR0bGVtZW50LWdyb3d0aCIKICAgIH0KICB9LAogICJwYWNrYWdlX2lkIjogIm15dGhvcy1nZW5lc2lzLmxha2V3b29kIiwKICAicGFja2FnZV92ZXJzaW9uIjogIjAuMS4wIiwKICAic2NoZW1hX3ZlcnNpb24iOiAiMS4wIgp9Cg=="
+    }
+  ]
+}

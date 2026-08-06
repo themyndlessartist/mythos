@@ -113,7 +113,10 @@ Status: In Progress
 
 Milestone: [M-003 Lakewood Vertical Slice](../Milestones/M-003_Lakewood_Vertical_Slice.md)
 
+Completion Report: [M-003 Lakewood Vertical Slice Report](../Milestones/M-003_Lakewood_Vertical_Slice_Report.md)
+
 - Select first setting — **Mythos: Genesis / Lakewood approved**
-- Define title-specific scope — **M-003 in progress**
-- Build content pipeline — **bundle importer in progress**
-- Produce vertical slice
+- Define title-specific scope — **M-003 complete**
+- Build content pipeline — **bundle importer validated for the M-003 package**
+- Produce vertical slice — **M-003 complete**
+- Expand title authoring and replace prototype content — **next milestone pending Executive scope**

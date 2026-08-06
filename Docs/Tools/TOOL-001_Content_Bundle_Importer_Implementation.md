@@ -35,25 +35,23 @@ The source manifest at `Data/TitlePackages/Genesis/Lakewood/package.json` carrie
 - Khaige as the playable test character; and
 - settlement growth as the vertical-slice focus.
 
-It now includes Khaige's control-neutral DATA-005 Character authoring record. The record preserves only approved facts and intentionally leaves visual identity, background, profession, and skills unassigned. `Scripts/build_content_bundle.mjs` wraps validated source-package bytes into the deterministic bundle consumed from the Godot project. Both macOS and Windows build scripts regenerate the bundle before compilation and verification.
+It now includes Khaige's control-neutral DATA-005 Character authoring record. Background, profession, and skills remain unassigned; the selected visual points only to an explicitly non-canon prototype manifest. The package also contains the Lakewood map composition, provisional NPC records, and DATA-006 Storehouse project. `Scripts/build_content_bundle.mjs` wraps validated source-package bytes into the deterministic bundle consumed from the Godot project. Both macOS and Windows build scripts regenerate the bundle before compilation and verification.
 
 ## Godot Boundary
 
 `PrototypeRoot` loads the bundled artifact through `Mythos.Content`, then locates and validates Khaige's Character record. Import failure stops the headless run with a structured diagnostic. Success reports the accepted package and character names. No title rules or content parsing were added to `Mythos.Framework`.
 
-The Genesis Godot adapter creates a runtime Character Entity from the accepted record. Required status and life-stage references that have not yet been approved use `mythos-test.*` identifiers local to the adapter; these are explicit prototype placeholders, not exported content or canon.
+The Genesis Godot adapter creates a runtime Character Entity from the accepted record. Required status and life-stage references that have not yet been approved use `mythos-test.*` identifiers local to the adapter; these are explicit prototype placeholders, not exported content or canon. `Mythos.Genesis` owns the prototype Storehouse definition and shared contribution state, while Godot owns display, controls, image decoding, and the local prototype save file.
 
 ## Verification
 
-- Importer tests cover valid schema 1.0 and 1.1 packages, versioned entry kinds, path traversal, case collisions, tampering, inventory mismatch, and configured limits.
-- The complete C# suite passes with 231 tests.
+- Importer tests cover valid schema 1.0 through 1.2 packages, versioned entry kinds, path traversal, case collisions, tampering, inventory mismatch, and configured limits.
+- The complete C# suite passes with 234 tests.
 - Framework smoke verification passes.
 - Godot headless editor import and runtime startup pass with `mythos-genesis.lakewood`.
-- Content Studio passes 29 tests, TypeScript checking, lint, and formatting verification.
+- Content Studio passes 30 tests, TypeScript checking, lint, and formatting verification.
 
-## Remaining M-003 Work
+## Deferred Production Work
 
-- Add Lakewood map, resources, construction sites, and provisional NPC records.
-- Add approved raster assets and sprite/map manifests.
-- Translate accepted authoring records into runtime Entity, Region, Character, and NPC state.
-- Implement and persist the first resource-to-building progression loop.
+- Promote provisional NPC presentation into full shared-framework NPC runtime profiles when canonical schedules and character references are approved.
+- Replace generated prototype artwork as final art direction delivers canonical assets.

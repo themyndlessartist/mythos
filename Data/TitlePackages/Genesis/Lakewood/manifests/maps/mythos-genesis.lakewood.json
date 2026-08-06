@@ -1,0 +1,70 @@
+{
+  "background_asset": {
+    "package_id": "mythos-genesis.lakewood",
+    "record_id": "mythos-genesis.lakewood-map-background"
+  },
+  "display_name": "Lakewood Prototype Composition",
+  "document_kind": "mythos.layered-map",
+  "extensions": {
+    "mythos.genesis": {
+      "art_status": "non-canon-prototype",
+      "composition_width": 1536,
+      "composition_height": 1024
+    }
+  },
+  "layers": [],
+  "map_manifest_id": "mythos-genesis.lakewood-map",
+  "markers": [
+    {
+      "display_name": "Lakewood Settlement",
+      "kind": "region",
+      "marker_id": "mythos-genesis.lakewood-settlement",
+      "notes": "Prototype reference point only; not a runtime Region boundary.",
+      "position": { "x": 755, "y": 495 }
+    },
+    {
+      "display_name": "Khaige Start",
+      "kind": "spawn",
+      "marker_id": "mythos-genesis.khaige-start",
+      "notes": "Prototype authoring point; runtime spawn semantics remain adapter-owned.",
+      "position": { "x": 720, "y": 520 }
+    },
+    {
+      "display_name": "Woodland Resource Area",
+      "kind": "reference",
+      "marker_id": "mythos-genesis.woodland-resource",
+      "position": { "x": 1320, "y": 690 }
+    },
+    {
+      "display_name": "Stone Resource Area",
+      "kind": "reference",
+      "marker_id": "mythos-genesis.stone-resource",
+      "position": { "x": 1205, "y": 205 }
+    },
+    {
+      "display_name": "Lakeshore Food Area",
+      "kind": "reference",
+      "marker_id": "mythos-genesis.lakeshore-food-resource",
+      "position": { "x": 245, "y": 405 }
+    },
+    {
+      "display_name": "Construction Site One",
+      "kind": "reference",
+      "marker_id": "mythos-genesis.construction-site-one",
+      "position": { "x": 490, "y": 735 }
+    },
+    {
+      "display_name": "Construction Site Two",
+      "kind": "reference",
+      "marker_id": "mythos-genesis.construction-site-two",
+      "position": { "x": 835, "y": 820 }
+    },
+    {
+      "display_name": "Construction Site Three",
+      "kind": "reference",
+      "marker_id": "mythos-genesis.construction-site-three",
+      "position": { "x": 1175, "y": 630 }
+    }
+  ],
+  "schema_version": "1.0"
+}

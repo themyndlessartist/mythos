@@ -1,0 +1,30 @@
+{
+  "completion_asset": {
+    "package_id": "mythos-genesis.lakewood",
+    "record_id": "mythos-genesis.storehouse-complete-image"
+  },
+  "completion_state_id": "mythos-genesis.storage-expanded",
+  "display_name": "Lakewood Storehouse",
+  "document_kind": "mythos.settlement-project-authoring",
+  "extensions": {
+    "mythos.genesis": {
+      "art_status": "non-canon-prototype",
+      "balance_status": "prototype"
+    }
+  },
+  "labor_required": 8,
+  "notes": "M-003 prototype project. Costs and completion effects are not final balance.",
+  "project_record_id": "mythos-genesis.storehouse",
+  "resource_requirements": [
+    {
+      "amount": 10,
+      "resource_id": "mythos-genesis.stone"
+    },
+    {
+      "amount": 20,
+      "resource_id": "mythos-genesis.timber"
+    }
+  ],
+  "schema_version": "1.0",
+  "site_marker_id": "mythos-genesis.construction-site-one"
+}

@@ -12,6 +12,12 @@
   "schema_version": "1.0",
   "tags": [
     "mythos-genesis.playable-test-character"
-  ]
+  ],
+  "visual": {
+    "options": {},
+    "sprite_manifest": {
+      "package_id": "mythos-genesis.lakewood",
+      "record_id": "mythos-genesis.khaige-prototype-visual"
+    }
+  }
 }
-

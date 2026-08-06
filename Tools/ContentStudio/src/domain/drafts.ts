@@ -35,6 +35,9 @@ function decode(value: string): AuthoringWorkspace {
   return structuredClone({
     ...workspace,
     characters: Array.isArray(workspace.characters) ? workspace.characters : [],
+    settlementProjects: Array.isArray(workspace.settlementProjects)
+      ? workspace.settlementProjects
+      : [],
   });
 }
 

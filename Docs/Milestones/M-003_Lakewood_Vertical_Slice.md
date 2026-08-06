@@ -2,7 +2,7 @@
 
 - Document ID: M-003
 - Version: 0.1
-- Status: In Progress
+- Status: Complete
 - Owner: Mythos Executive Development
 - Last Updated: August 2026
 
@@ -36,6 +36,12 @@ Khaige is fixed for this test slice only. This milestone does not replace the fr
 
 The first increment establishes the milestone, creates a minimal package carrying the approved title identity, and implements the safe bundle-import boundary. It intentionally contains no invented Lakewood geography, production art, or gameplay rules.
 
+## Completed Prototype
+
+The completed slice includes a packaged Lakewood map, control-neutral Khaige authoring, four provisional purpose-driven NPC records, generated non-canon visuals, and the DATA-006 Storehouse project. The setting-specific `Mythos.Genesis` module applies the approved 20 timber, 10 stone, and 8 labor requirements without moving title rules into the shared framework.
+
+Player commands and autonomous NPC assistance use the same contribution operations. Completion consumes the required inputs, displays the Storehouse on the selected construction site, applies the storage-expanded state, and persists through a versioned prototype save. A reset command supports repeatable testing.
+
 ## Non-Goals
 
 - A complete town, region, economy, crafting system, construction sandbox, or final NPC AI.
@@ -56,7 +62,9 @@ M-003 is complete when:
 - all content references and package bytes validate deterministically; and
 - automated and headless Godot verification passes.
 
-## Dependencies and Open Inputs
+All criteria were verified in August 2026. A visual playtest completed the Storehouse, restarted Godot, and confirmed that the building and settlement state were restored.
+
+## Deferred Production Inputs
 
 - Lakewood geography and settlement handoff
 - Khaige character and visual handoff

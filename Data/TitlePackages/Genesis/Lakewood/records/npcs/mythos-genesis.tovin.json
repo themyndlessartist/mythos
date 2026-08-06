@@ -1,0 +1,16 @@
+{
+  "display_name": "Tovin",
+  "document_kind": "mythos.npc-authoring",
+  "extensions": { "mythos.genesis": { "purpose": "builder", "status": "provisional" } },
+  "notes": "Provisional Lakewood builder for M-003 testing.",
+  "npc_record_id": "mythos-genesis.tovin",
+  "schema_version": "1.0",
+  "tags": ["mythos-genesis.builder", "mythos-genesis.provisional"],
+  "visual": {
+    "options": {},
+    "sprite_manifest": {
+      "package_id": "mythos-genesis.lakewood",
+      "record_id": "mythos-genesis.lakewood-worker-prototype-visual"
+    }
+  }
+}

@@ -4,15 +4,147 @@
   "document_kind": "mythos.content-package",
   "entries": [
     {
+      "id": "mythos-genesis.khaige-prototype-image",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "d4baf3ced882115d6d6124fb4100f41566eaa05186765ee168a7365c89e68412"
+      },
+      "kind": "asset",
+      "media_type": "image/png",
+      "path": "assets/characters/khaige-prototype-v1.png",
+      "size": 620389
+    },
+    {
+      "id": "mythos-genesis.lakewood-map-background",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "beab83c0860ddc955b7d957e4cb91df814bb34128ab7229fee9a3512a5d6f3c6"
+      },
+      "kind": "asset",
+      "media_type": "image/png",
+      "path": "assets/maps/lakewood-background-prototype-v1.png",
+      "size": 3406960
+    },
+    {
+      "id": "mythos-genesis.lakewood-worker-prototype-image",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "5547602a828d57ff10da4b4afbc0c7b3f3e7fa83e85de68635f3a63d659356d3"
+      },
+      "kind": "asset",
+      "media_type": "image/png",
+      "path": "assets/characters/lakewood-worker-prototype-v1.png",
+      "size": 737981
+    },
+    {
+      "id": "mythos-genesis.storehouse-complete-image",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "0db9fb1ee788e3fe2df1cd40c8158b3f94dc450c23d2c54137b129804c82527a"
+      },
+      "kind": "asset",
+      "media_type": "image/png",
+      "path": "assets/buildings/storehouse-complete-prototype-v1.png",
+      "size": 1684136
+    },
+    {
       "id": "mythos-genesis.khaige",
       "integrity": {
         "algorithm": "sha256",
-        "digest": "4f988a489b4aceb3033ced535ac2c708c681639664ebb4d4ff9014ef3fe1d908"
+        "digest": "79890d71240803e3717ed6a9682b14ab8b548b26f0db75f20ad6bf3b2f94c1d1"
       },
       "kind": "character",
       "media_type": "application/json",
       "path": "records/characters/mythos-genesis.khaige.json",
-      "size": 494
+      "size": 669
+    },
+    {
+      "id": "mythos-genesis.lakewood-map",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "e36e89bf97123bf6d3e75771d6f37e392cc7941967f4e8ae192e5d0bf5a19ffd"
+      },
+      "kind": "layered-map",
+      "media_type": "application/json",
+      "path": "manifests/maps/mythos-genesis.lakewood.json",
+      "size": 2138
+    },
+    {
+      "id": "mythos-genesis.alden",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "c7c7b3269eba1ac3bd059f2b7d573256d5397594736ebe1ceb7f41eb099a97f3"
+      },
+      "kind": "npc",
+      "media_type": "application/json",
+      "path": "records/npcs/mythos-genesis.alden.json",
+      "size": 556
+    },
+    {
+      "id": "mythos-genesis.elia",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "700cccf7e29cbe4354c3417aafa292498526efc7628e62364cb7c5bbe3fa4b72"
+      },
+      "kind": "npc",
+      "media_type": "application/json",
+      "path": "records/npcs/mythos-genesis.elia.json",
+      "size": 560
+    },
+    {
+      "id": "mythos-genesis.mara",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "0bbeb4bcff558c7462eae0ae7a01cdb0e497caff9ad5de3a9766abfcd62f1d93"
+      },
+      "kind": "npc",
+      "media_type": "application/json",
+      "path": "records/npcs/mythos-genesis.mara.json",
+      "size": 563
+    },
+    {
+      "id": "mythos-genesis.tovin",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "6cd6e18addb5f44ef079914b393dd9ef9d3e86b56ed140652263819f270548a8"
+      },
+      "kind": "npc",
+      "media_type": "application/json",
+      "path": "records/npcs/mythos-genesis.tovin.json",
+      "size": 547
+    },
+    {
+      "id": "mythos-genesis.storehouse",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "2db6b57e19357ca899d9d01a1dd45a88625730bc510ab2846fbc4e2181864acb"
+      },
+      "kind": "settlement-project",
+      "media_type": "application/json",
+      "path": "records/settlement-projects/mythos-genesis.storehouse.json",
+      "size": 869
+    },
+    {
+      "id": "mythos-genesis.khaige-prototype-visual",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "b175d44f947055f83fb0637962b058f98a68c273e3bee2c8033765fb994e17c8"
+      },
+      "kind": "sprite-animation",
+      "media_type": "application/json",
+      "path": "manifests/sprites/mythos-genesis.khaige-prototype.json",
+      "size": 985
+    },
+    {
+      "id": "mythos-genesis.lakewood-worker-prototype-visual",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "c0e629c5bb4db755a0f56ddb11b39bd42070eab0d9692e72b0f8c4310e221c78"
+      },
+      "kind": "sprite-animation",
+      "media_type": "application/json",
+      "path": "manifests/sprites/mythos-genesis.lakewood-worker-prototype.json",
+      "size": 1007
     }
   ],
   "extensions": {
@@ -25,5 +157,5 @@
   },
   "package_id": "mythos-genesis.lakewood",
   "package_version": "0.1.0",
-  "schema_version": "1.1"
+  "schema_version": "1.2"
 }

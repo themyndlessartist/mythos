@@ -100,6 +100,23 @@ public sealed class ContentBundleImporterTests
             (character.path, character.media_type, content),
         ]);
         Assert.True(new ContentBundleImporter().Import(accepted).IsSuccess);
+
+        var project = character with { kind = "settlement-project", id = "mythos-genesis.storehouse" };
+        var schema11Project = Package("genesis.lakewood", [project], "1.1");
+        var rejectedProject = Bundle("genesis.lakewood",
+        [
+            ("package.json", "application/json", schema11Project),
+            (project.path, project.media_type, content),
+        ]);
+        Assert.Equal(ContentImportErrorCodes.InventoryMismatch, new ContentBundleImporter().Import(rejectedProject).Error!.Code);
+
+        var schema12Project = Package("genesis.lakewood", [project], "1.2");
+        var acceptedProject = Bundle("genesis.lakewood",
+        [
+            ("package.json", "application/json", schema12Project),
+            (project.path, project.media_type, content),
+        ]);
+        Assert.True(new ContentBundleImporter().Import(acceptedProject).IsSuccess);
     }
 
     [Fact]

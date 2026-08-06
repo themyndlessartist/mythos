@@ -1,0 +1,16 @@
+{
+  "display_name": "Elia",
+  "document_kind": "mythos.npc-authoring",
+  "extensions": { "mythos.genesis": { "purpose": "fisher", "status": "provisional" } },
+  "notes": "Provisional Lakewood fisher and food gatherer for M-003 testing.",
+  "npc_record_id": "mythos-genesis.elia",
+  "schema_version": "1.0",
+  "tags": ["mythos-genesis.fisher", "mythos-genesis.provisional"],
+  "visual": {
+    "options": {},
+    "sprite_manifest": {
+      "package_id": "mythos-genesis.lakewood",
+      "record_id": "mythos-genesis.lakewood-worker-prototype-visual"
+    }
+  }
+}

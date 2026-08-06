@@ -1,6 +1,7 @@
 using Godot;
 using Mythos.Content;
 using Mythos.Framework.Entities;
+using Mythos.Genesis;
 
 namespace Mythos.GodotIntegration;
 
@@ -35,6 +36,23 @@ public partial class PrototypeRoot : Node
         if (!runtimeCharacter.IsSuccess)
         {
             GD.PushError($"Genesis character bootstrap failed: {runtimeCharacter.ErrorCode} - {runtimeCharacter.ErrorMessage}");
+            GetTree().Quit(1);
+            return;
+        }
+
+        var project = new LakewoodProjectDefinitionReader().Read(bundle, "mythos-genesis.storehouse");
+        if (!project.IsSuccess)
+        {
+            GD.PushError($"Genesis project import failed: {project.Error!.Code} - {project.Error.Message}");
+            GetTree().Quit(1);
+            return;
+        }
+
+        var lakewood = new LakewoodPrototypeView();
+        AddChild(lakewood);
+        if (!lakewood.Initialize(bundle, project.Value!, out var viewError))
+        {
+            GD.PushError($"Lakewood view failed: {viewError}");
             GetTree().Quit(1);
             return;
         }

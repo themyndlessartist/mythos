@@ -17,6 +17,9 @@ public sealed class ContentBundleImporter
     private static readonly HashSet<string> Schema11EntryKinds =
         [.. Schema10EntryKinds, "character"];
 
+    private static readonly HashSet<string> Schema12EntryKinds =
+        [.. Schema11EntryKinds, "settlement-project"];
+
     private static readonly Regex PackageIdPattern = new(
         "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
@@ -168,7 +171,7 @@ public sealed class ContentBundleImporter
             var root = manifestDocument.RootElement;
             if (!HasExactString(root, "document_kind", "mythos.content-package") ||
                 !TryRequiredString(root, "schema_version", out var schemaVersion) ||
-                (schemaVersion != "1.0" && schemaVersion != "1.1") ||
+                (schemaVersion != "1.0" && schemaVersion != "1.1" && schemaVersion != "1.2") ||
                 !TryRequiredString(root, "package_id", out var manifestPackageId) ||
                 !string.Equals(packageId, manifestPackageId, StringComparison.Ordinal) ||
                 !root.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array)
@@ -178,7 +181,12 @@ public sealed class ContentBundleImporter
 
             var declaredPaths = new HashSet<string>(StringComparer.Ordinal);
             var declaredIds = new HashSet<string>(StringComparer.Ordinal);
-            var supportedEntryKinds = schemaVersion == "1.1" ? Schema11EntryKinds : Schema10EntryKinds;
+            var supportedEntryKinds = schemaVersion switch
+            {
+                "1.2" => Schema12EntryKinds,
+                "1.1" => Schema11EntryKinds,
+                _ => Schema10EntryKinds,
+            };
             foreach (var entry in entries.EnumerateArray())
             {
                 if (!TryRequiredString(entry, "kind", out var kind) ||

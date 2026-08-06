@@ -1,0 +1,16 @@
+{
+  "display_name": "Alden",
+  "document_kind": "mythos.npc-authoring",
+  "extensions": { "mythos.genesis": { "purpose": "woodcutter", "status": "provisional" } },
+  "notes": "Provisional Lakewood woodcutter for M-003 testing.",
+  "npc_record_id": "mythos-genesis.alden",
+  "schema_version": "1.0",
+  "tags": ["mythos-genesis.provisional", "mythos-genesis.woodcutter"],
+  "visual": {
+    "options": {},
+    "sprite_manifest": {
+      "package_id": "mythos-genesis.lakewood",
+      "record_id": "mythos-genesis.lakewood-worker-prototype-visual"
+    }
+  }
+}

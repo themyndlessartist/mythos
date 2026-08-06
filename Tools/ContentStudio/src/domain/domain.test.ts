@@ -65,6 +65,7 @@ const workspace = (): AuthoringWorkspace => ({
     ],
   },
   characters: [],
+  settlementProjects: [],
   npcs: [
     {
       document_kind: "mythos.npc-authoring",
@@ -240,6 +241,32 @@ describe("contract and reference validation", () => {
     });
 
     expect(validateWorkspace(value).map((d) => d.code)).toContain(
+      "package.entry-kind-version",
+    );
+  });
+  it("validates settlement projects only in package schema 1.2", () => {
+    const value = workspace();
+    value.package.schema_version = "1.2";
+    value.settlementProjects.push({
+      document_kind: "mythos.settlement-project-authoring",
+      schema_version: "1.0",
+      project_record_id: "studio.storehouse",
+      display_name: "Storehouse",
+      site_marker_id: "studio.site-one",
+      resource_requirements: [
+        { resource_id: "studio.stone", amount: 10 },
+        { resource_id: "studio.timber", amount: 20 },
+      ],
+      labor_required: 8,
+      completion_asset: ref("studio.body"),
+      completion_state_id: "studio.storage-expanded",
+    });
+
+    expect(
+      exportReadinessDiagnostics(value).filter((d) => d.severity === "error"),
+    ).toEqual([]);
+    value.package.schema_version = "1.1";
+    expect(exportReadinessDiagnostics(value).map((d) => d.code)).toContain(
       "package.entry-kind-version",
     );
   });

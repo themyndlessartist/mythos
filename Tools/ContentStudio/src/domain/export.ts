@@ -59,6 +59,12 @@ const recordFiles = (
     path: `records/characters/${value.character_record_id}.json`,
     bytes: utf8(canonicalJson(value)),
   })),
+  ...workspace.settlementProjects.map((value) => ({
+    kind: "settlement-project" as const,
+    id: value.project_record_id,
+    path: `records/settlement-projects/${value.project_record_id}.json`,
+    bytes: utf8(canonicalJson(value)),
+  })),
   ...workspace.npcs.map((value) => ({
     kind: "npc" as const,
     id: value.npc_record_id,
@@ -87,6 +93,14 @@ export function exportReadinessDiagnostics(
       kind: "character" as const,
       id: value.character_record_id,
       path: `records/characters/${value.character_record_id}.json`,
+      media_type: "application/json",
+      size: 0,
+      integrity: { algorithm: "sha256", digest: "pending" },
+    })),
+    ...workspace.settlementProjects.map((value) => ({
+      kind: "settlement-project" as const,
+      id: value.project_record_id,
+      path: `records/settlement-projects/${value.project_record_id}.json`,
       media_type: "application/json",
       size: 0,
       integrity: { algorithm: "sha256", digest: "pending" },

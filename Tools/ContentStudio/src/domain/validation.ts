@@ -8,6 +8,7 @@ import type {
   NpcAuthoringRecord,
   PackageEntry,
   RecordReference,
+  SettlementProjectAuthoringRecord,
   SpriteAnimationManifest,
 } from "./models";
 import { normalizePackagePath, RASTER_MEDIA_TYPES } from "./security";
@@ -49,6 +50,7 @@ function duplicateValues(values: string[]): Set<string> {
 function documentId(document: AuthoringDocument): string {
   if ("package_id" in document) return document.package_id;
   if ("character_record_id" in document) return document.character_record_id;
+  if ("project_record_id" in document) return document.project_record_id;
   if ("npc_record_id" in document) return document.npc_record_id;
   if ("sprite_manifest_id" in document) return document.sprite_manifest_id;
   return document.map_manifest_id;
@@ -121,7 +123,7 @@ export function validatePackage(value: ContentPackageManifest): Diagnostic[] {
     value.package_id,
     value.display_name,
     add,
-    ["1.0", "1.1"],
+    ["1.0", "1.1", "1.2"],
   );
   if (!/^\d+\.\d+\.\d+$/.test(value.package_version))
     add("package.version", "/package_version", "Use major.minor.patch.");
@@ -170,6 +172,12 @@ export function validatePackage(value: ContentPackageManifest): Diagnostic[] {
         "package.entry-kind-version",
         `${path}/kind`,
         "Character entries require package schema version 1.1.",
+      );
+    if (entry.kind === "settlement-project" && value.schema_version !== "1.2")
+      add(
+        "package.entry-kind-version",
+        `${path}/kind`,
+        "Settlement project entries require package schema version 1.2.",
       );
     if (
       entry.kind === "asset" &&
@@ -232,6 +240,63 @@ export function validateCharacter(
       add,
     );
   validateTagsAndNotes(value.tags, value.notes, "character", add);
+  return result;
+}
+
+export function validateSettlementProject(
+  value: SettlementProjectAuthoringRecord,
+): Diagnostic[] {
+  const { result, add } = validator(value);
+  common(
+    value,
+    "mythos.settlement-project-authoring",
+    value.project_record_id,
+    value.display_name,
+    add,
+  );
+  if (!isAuthoringId(value.site_marker_id))
+    add(
+      "project.invalid-site",
+      "/site_marker_id",
+      "Site marker ID is invalid.",
+    );
+  if (!value.resource_requirements.length)
+    add(
+      "project.empty-requirements",
+      "/resource_requirements",
+      "At least one resource is required.",
+    );
+  const resourceIds = duplicateValues(
+    value.resource_requirements.map((item) => item.resource_id),
+  );
+  value.resource_requirements.forEach((item, index) => {
+    if (!isAuthoringId(item.resource_id) || resourceIds.has(item.resource_id))
+      add(
+        "project.invalid-resource",
+        `/resource_requirements/${index}/resource_id`,
+        "Resource IDs must be valid and unique.",
+      );
+    if (!Number.isInteger(item.amount) || item.amount <= 0)
+      add(
+        "project.invalid-amount",
+        `/resource_requirements/${index}/amount`,
+        "Resource amount must be a positive integer.",
+      );
+  });
+  if (!Number.isInteger(value.labor_required) || value.labor_required <= 0)
+    add(
+      "project.invalid-labor",
+      "/labor_required",
+      "Labor must be a positive integer.",
+    );
+  validateReference(value.completion_asset, "/completion_asset", add);
+  if (!isAuthoringId(value.completion_state_id))
+    add(
+      "project.invalid-completion",
+      "/completion_state_id",
+      "Completion state ID is invalid.",
+    );
+  validateTagsAndNotes(undefined, value.notes, "project", add);
   return result;
 }
 
@@ -481,6 +546,8 @@ export function validateDocument(document: AuthoringDocument): Diagnostic[] {
       return validatePackage(document);
     case "mythos.character-authoring":
       return validateCharacter(document);
+    case "mythos.settlement-project-authoring":
+      return validateSettlementProject(document);
     case "mythos.npc-authoring":
       return validateNpc(document);
     case "mythos.sprite-animation":
@@ -506,6 +573,7 @@ export function validateWorkspace(workspace: AuthoringWorkspace): Diagnostic[] {
   const diagnostics = [
     validatePackage(workspace.package),
     ...workspace.characters.map(validateCharacter),
+    ...workspace.settlementProjects.map(validateSettlementProject),
     ...workspace.npcs.map(validateNpc),
     ...workspace.sprites.map(validateSprite),
     ...workspace.maps.map(validateMap),
@@ -593,6 +661,18 @@ export function validateWorkspace(workspace: AuthoringWorkspace): Diagnostic[] {
           });
       });
   });
+  workspace.settlementProjects.forEach((project) =>
+    addReference(
+      project.project_record_id,
+      "/completion_asset",
+      resolve(
+        project.completion_asset,
+        workspace.package.package_id,
+        workspace.package.entries,
+        "asset",
+      ),
+    ),
+  );
   const assetRefs: Array<[string, string, RecordReference]> = [];
   workspace.sprites.forEach((sprite) => {
     sprite.layers.forEach((layer, i) =>

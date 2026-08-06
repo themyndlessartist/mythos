@@ -48,6 +48,8 @@ Godot integration is located in `Source/Integration/Godot`. Authoritative framew
 
 The first title-specific milestone is [M-003 Lakewood Vertical Slice](Docs/Milestones/M-003_Lakewood_Vertical_Slice.md). Its source package begins under `Data/TitlePackages/Genesis/Lakewood`; deterministic Godot import artifacts are built with `Scripts/build_content_bundle.mjs`.
 
+To play the Lakewood prototype, open `Source/Integration/Godot/project.godot` in Godot 4.7 .NET and run the project. The prototype includes Khaige, four provisional Lakewood workers, shared resource contributions, Storehouse construction, and local progress saving. All included art is temporary and non-canon.
+
 Run the complete macOS build and smoke verification with:
 
 ```bash

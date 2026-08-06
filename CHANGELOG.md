@@ -6,6 +6,8 @@ All notable changes to Mythos will be documented in this file.
 
 ### Added
 
+- Completed M-003 with a playable Lakewood scene, generated non-canon prototype art, Khaige and four provisional NPCs, DATA-006 Storehouse authoring, shared player/NPC contributions, visible settlement change, and versioned save/reload.
+- Added the engine-neutral `Mythos.Genesis` title module for Lakewood project definitions and settlement prototype state without placing title rules in `Mythos.Framework`.
 - Added DATA-005 shared Character authoring records, Content Studio validation/export support, and the first control-neutral Khaige record for the Genesis/Lakewood slice.
 - Added independent DATA-005 Character record validation and Godot startup verification for Khaige without prematurely creating runtime state.
 - Added a Genesis title adapter that creates Khaige as a shared-framework Character Entity using explicit non-canon test references for deferred status and life-stage data.

@@ -48,6 +48,14 @@ export function deterministicWorkspace(
           ? [...new Set(character.tags)].sort(ordinalCompare)
           : undefined,
       })),
+    settlementProjects: [...workspace.settlementProjects]
+      .sort((a, b) => ordinalCompare(a.project_record_id, b.project_record_id))
+      .map((project) => ({
+        ...project,
+        resource_requirements: [...project.resource_requirements].sort((a, b) =>
+          ordinalCompare(a.resource_id, b.resource_id),
+        ),
+      })),
     npcs: [...workspace.npcs]
       .sort((a, b) => ordinalCompare(a.npc_record_id, b.npc_record_id))
       .map((npc) => ({

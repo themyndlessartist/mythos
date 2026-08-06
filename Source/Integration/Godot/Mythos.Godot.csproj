@@ -9,5 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="../../Core/Mythos.Framework.csproj" />
     <ProjectReference Include="../../Content/Mythos.Content.csproj" />
+    <ProjectReference Include="../../Titles/Genesis/Mythos.Genesis.csproj" />
   </ItemGroup>
 </Project>

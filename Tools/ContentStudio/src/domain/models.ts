@@ -13,7 +13,12 @@ export interface Integrity {
 }
 
 export type PackageEntryKind =
-  "character" | "npc" | "sprite-animation" | "layered-map" | "asset";
+  | "character"
+  | "npc"
+  | "sprite-animation"
+  | "layered-map"
+  | "settlement-project"
+  | "asset";
 
 export interface PackageEntry {
   kind: PackageEntryKind;
@@ -31,7 +36,7 @@ export interface PackageDependency {
 
 export interface ContentPackageManifest {
   document_kind: "mythos.content-package";
-  schema_version: "1.0" | "1.1";
+  schema_version: "1.0" | "1.1" | "1.2";
   package_id: NamespacedId;
   package_version: string;
   display_name: string;
@@ -64,6 +69,23 @@ export interface CharacterAuthoringRecord {
     options: Record<string, NamespacedId>;
   };
   tags?: NamespacedId[];
+  notes?: string;
+  extensions?: PassiveExtensions;
+}
+
+export interface SettlementProjectAuthoringRecord {
+  document_kind: "mythos.settlement-project-authoring";
+  schema_version: "1.0";
+  project_record_id: NamespacedId;
+  display_name: string;
+  site_marker_id: NamespacedId;
+  resource_requirements: Array<{
+    resource_id: NamespacedId;
+    amount: number;
+  }>;
+  labor_required: number;
+  completion_asset: RecordReference;
+  completion_state_id: NamespacedId;
   notes?: string;
   extensions?: PassiveExtensions;
 }
@@ -158,6 +180,7 @@ export interface AssetMetadata {
 export interface AuthoringWorkspace {
   package: ContentPackageManifest;
   characters: CharacterAuthoringRecord[];
+  settlementProjects: SettlementProjectAuthoringRecord[];
   npcs: NpcAuthoringRecord[];
   sprites: SpriteAnimationManifest[];
   maps: LayeredMapManifest[];
@@ -167,6 +190,7 @@ export interface AuthoringWorkspace {
 export type AuthoringDocument =
   | ContentPackageManifest
   | CharacterAuthoringRecord
+  | SettlementProjectAuthoringRecord
   | NpcAuthoringRecord
   | SpriteAnimationManifest
   | LayeredMapManifest;

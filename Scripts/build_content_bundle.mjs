@@ -18,7 +18,7 @@ const manifest = JSON.parse(manifestBytes.toString("utf8"));
 
 if (
   manifest.document_kind !== "mythos.content-package" ||
-  !["1.0", "1.1"].includes(manifest.schema_version)
+  !["1.0", "1.1", "1.2"].includes(manifest.schema_version)
 ) {
   throw new Error("Unsupported content package manifest.");
 }

@@ -1,0 +1,41 @@
+{
+  "animations": [
+    {
+      "animation_id": "mythos-genesis.idle",
+      "display_name": "Idle",
+      "frames": [
+        {
+          "assets": [
+            {
+              "package_id": "mythos-genesis.lakewood",
+              "record_id": "mythos-genesis.khaige-prototype-image"
+            }
+          ],
+          "duration_units": 1
+        }
+      ],
+      "loop": true
+    }
+  ],
+  "display_name": "Khaige Non-Canon Prototype Visual",
+  "document_kind": "mythos.sprite-animation",
+  "extensions": {
+    "mythos.genesis": {
+      "art_status": "non-canon-prototype"
+    }
+  },
+  "layers": [
+    {
+      "asset": {
+        "package_id": "mythos-genesis.lakewood",
+        "record_id": "mythos-genesis.khaige-prototype-image"
+      },
+      "display_name": "Prototype Figure",
+      "layer_id": "mythos-genesis.khaige-prototype-layer",
+      "order": 0
+    }
+  ],
+  "options": [],
+  "schema_version": "1.0",
+  "sprite_manifest_id": "mythos-genesis.khaige-prototype-visual"
+}

@@ -53,13 +53,14 @@ const ref = (record_id: string) => ({
 const initialWorkspace = (): AuthoringWorkspace => ({
   package: {
     document_kind: "mythos.content-package",
-    schema_version: "1.0",
+    schema_version: "1.1",
     package_id: "mythos.local-workspace",
     package_version: "0.1.0",
     display_name: "Local workspace",
     entries: [],
     dependencies: [],
   },
+  characters: [],
   npcs: [
     {
       document_kind: "mythos.npc-authoring",

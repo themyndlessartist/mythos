@@ -2,10 +2,10 @@
 
 - Document ID: DATA-001
 - Title: Content Package Manifest
-- Version: 0.1
+- Version: 0.2
 - Status: Approved
 - Owner: Mythos Executive Development
-- Last Updated: July 2026
+- Last Updated: August 2026
 
 ## 1. Purpose and Boundary
 
@@ -20,7 +20,7 @@ It is not a save manifest, runtime registry, mod executable, or engine resource 
 | Member | Type | Contract |
 |---|---|---|
 | `document_kind` | string | Exactly `mythos.content-package` |
-| `schema_version` | string | DATA-001 major/minor version, initially `1.0` |
+| `schema_version` | string | DATA-001 major/minor version; `1.0` or backward-compatible `1.1` |
 | `package_id` | string | Stable namespaced authoring ID |
 | `package_version` | string | Three non-negative integers `major.minor.patch` |
 | `display_name` | string | Non-empty author-facing label; not identity |
@@ -28,7 +28,7 @@ It is not a save manifest, runtime registry, mod executable, or engine resource 
 | `dependencies` | array | Required package ID plus compatible version range; empty in a standalone MVP package |
 | `extensions` | object | Optional namespaced passive data |
 
-Each `entries` item contains `kind` (`npc`, `sprite-animation`, `layered-map`, or `asset`), stable `id`, unique package-relative `path`, `media_type`, byte `size`, and `integrity` (`algorithm`, `digest`). Record IDs must match the ID inside the referenced document. Entries are ordered by `kind`, then ID, then path for deterministic export.
+Each `entries` item contains `kind` (`character`, `npc`, `sprite-animation`, `layered-map`, or `asset`), stable `id`, unique package-relative `path`, `media_type`, byte `size`, and `integrity` (`algorithm`, `digest`). The `character` kind is available beginning with schema `1.1`; schema `1.0` packages remain valid but cannot use it. Record IDs must match the ID inside the referenced document. Entries are ordered by `kind`, then ID, then path for deterministic export.
 
 ## 3. Stable IDs and Versions
 
@@ -53,7 +53,7 @@ New entry kinds or fields require a DATA-001 revision or namespaced passive exte
 ## 7. Acceptance Criteria
 
 - A package inventory is complete, deterministic, integrity-verifiable, and path-safe.
-- Every DATA-002 through DATA-004 record and referenced asset is declared exactly once.
+- Every DATA-002 through DATA-005 record and referenced asset is declared exactly once.
 - Independent validators reach the same reference and version result.
 - Runtime state and save data cannot be mistaken for accepted package entries.
 

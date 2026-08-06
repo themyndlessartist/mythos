@@ -64,6 +64,7 @@ const workspace = (): AuthoringWorkspace => ({
       },
     ],
   },
+  characters: [],
   npcs: [
     {
       document_kind: "mythos.npc-authoring",
@@ -212,6 +213,36 @@ describe("package path and media security", () => {
 });
 
 describe("contract and reference validation", () => {
+  it("accepts a visual-optional character in a schema 1.1 package", () => {
+    const value = workspace();
+    value.package.schema_version = "1.1";
+    value.characters.push({
+      document_kind: "mythos.character-authoring",
+      schema_version: "1.0",
+      character_record_id: "studio.khaige",
+      display_name: "Khaige",
+      tags: ["studio.playable-test-character"],
+    });
+
+    expect(
+      exportReadinessDiagnostics(value).filter((d) => d.severity === "error"),
+    ).toEqual([]);
+  });
+  it("requires package schema 1.1 for character entries", () => {
+    const value = workspace();
+    value.package.entries.push({
+      kind: "character",
+      id: "studio.khaige",
+      path: "records/characters/studio.khaige.json",
+      media_type: "application/json",
+      size: 1,
+      integrity: { algorithm: "sha256", digest: "a" },
+    });
+
+    expect(validateWorkspace(value).map((d) => d.code)).toContain(
+      "package.entry-kind-version",
+    );
+  });
   it("accepts a valid cross-referenced workspace", () => {
     expect(
       validateWorkspace(workspace()).filter((d) => d.severity === "error"),

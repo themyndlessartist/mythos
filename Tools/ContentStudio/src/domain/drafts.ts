@@ -32,7 +32,10 @@ function decode(value: string): AuthoringWorkspace {
     !workspace.package
   )
     throw new Error("draft.malformed");
-  return structuredClone(workspace);
+  return structuredClone({
+    ...workspace,
+    characters: Array.isArray(workspace.characters) ? workspace.characters : [],
+  });
 }
 
 export class MemoryDraftAdapter implements DraftAdapter {

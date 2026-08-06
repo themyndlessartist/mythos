@@ -2,6 +2,7 @@ import { isAuthoringId } from "./ids";
 import type {
   AuthoringDocument,
   AuthoringWorkspace,
+  CharacterAuthoringRecord,
   ContentPackageManifest,
   LayeredMapManifest,
   NpcAuthoringRecord,
@@ -47,6 +48,7 @@ function duplicateValues(values: string[]): Set<string> {
 
 function documentId(document: AuthoringDocument): string {
   if ("package_id" in document) return document.package_id;
+  if ("character_record_id" in document) return document.character_record_id;
   if ("npc_record_id" in document) return document.npc_record_id;
   if ("sprite_manifest_id" in document) return document.sprite_manifest_id;
   return document.map_manifest_id;
@@ -66,6 +68,7 @@ function common(
   id: string,
   displayName: string,
   add: Add,
+  supportedVersions: readonly string[] = ["1.0"],
 ): void {
   if (document.document_kind !== expectedKind)
     add(
@@ -73,11 +76,11 @@ function common(
       "/document_kind",
       `Expected ${expectedKind}.`,
     );
-  if (document.schema_version !== "1.0")
+  if (!supportedVersions.includes(document.schema_version))
     add(
       "contract.schema-version",
       "/schema_version",
-      "Only schema version 1.0 is supported.",
+      `Supported schema versions: ${supportedVersions.join(", ")}.`,
     );
   if (!isAuthoringId(id))
     add("identity.invalid", "/id", "Use a lowercase namespaced authoring ID.");
@@ -118,6 +121,7 @@ export function validatePackage(value: ContentPackageManifest): Diagnostic[] {
     value.package_id,
     value.display_name,
     add,
+    ["1.0", "1.1"],
   );
   if (!/^\d+\.\d+\.\d+$/.test(value.package_version))
     add("package.version", "/package_version", "Use major.minor.patch.");
@@ -161,6 +165,12 @@ export function validatePackage(value: ContentPackageManifest): Diagnostic[] {
         `${path}/integrity`,
         "Integrity metadata is required.",
       );
+    if (entry.kind === "character" && value.schema_version === "1.0")
+      add(
+        "package.entry-kind-version",
+        `${path}/kind`,
+        "Character entries require package schema version 1.1.",
+      );
     if (
       entry.kind === "asset" &&
       !(RASTER_MEDIA_TYPES as readonly string[]).includes(entry.media_type)
@@ -171,6 +181,57 @@ export function validatePackage(value: ContentPackageManifest): Diagnostic[] {
         "Unsupported raster media type.",
       );
   });
+  return result;
+}
+
+function validateTagsAndNotes(
+  tags: string[] | undefined,
+  notes: string | undefined,
+  prefix: string,
+  add: Add,
+): void {
+  const values = tags ?? [];
+  values.forEach((tag, index) => {
+    if (!isAuthoringId(tag))
+      add(
+        `${prefix}.invalid-tag`,
+        `/tags/${index}`,
+        "Tags must be namespaced IDs.",
+      );
+  });
+  if (
+    duplicateValues(values).size ||
+    values.some(
+      (tag, index) => index > 0 && ordinalCompare(values[index - 1], tag) >= 0,
+    )
+  )
+    add(`${prefix}.tags-order`, "/tags", "Tags must be sorted and unique.");
+  if (notes !== undefined && !plainTextSafe(notes))
+    add(
+      "security.unsafe-text",
+      "/notes",
+      "Notes must be plain text without markup.",
+    );
+}
+
+export function validateCharacter(
+  value: CharacterAuthoringRecord,
+): Diagnostic[] {
+  const { result, add } = validator(value);
+  common(
+    value,
+    "mythos.character-authoring",
+    value.character_record_id,
+    value.display_name,
+    add,
+  );
+  if (value.visual)
+    validateReference(
+      value.visual.sprite_manifest,
+      "/visual/sprite_manifest",
+      add,
+    );
+  validateTagsAndNotes(value.tags, value.notes, "character", add);
   return result;
 }
 
@@ -188,24 +249,7 @@ export function validateNpc(value: NpcAuthoringRecord): Diagnostic[] {
     "/visual/sprite_manifest",
     add,
   );
-  const tags = value.tags ?? [];
-  tags.forEach((tag, index) => {
-    if (!isAuthoringId(tag))
-      add("npc.invalid-tag", `/tags/${index}`, "Tags must be namespaced IDs.");
-  });
-  if (
-    duplicateValues(tags).size ||
-    tags.some(
-      (tag, index) => index > 0 && ordinalCompare(tags[index - 1], tag) >= 0,
-    )
-  )
-    add("npc.tags-order", "/tags", "Tags must be sorted and unique.");
-  if (value.notes !== undefined && !plainTextSafe(value.notes))
-    add(
-      "security.unsafe-text",
-      "/notes",
-      "Notes must be plain text without markup.",
-    );
+  validateTagsAndNotes(value.tags, value.notes, "npc", add);
   return result;
 }
 
@@ -435,6 +479,8 @@ export function validateDocument(document: AuthoringDocument): Diagnostic[] {
   switch (document.document_kind) {
     case "mythos.content-package":
       return validatePackage(document);
+    case "mythos.character-authoring":
+      return validateCharacter(document);
     case "mythos.npc-authoring":
       return validateNpc(document);
     case "mythos.sprite-animation":
@@ -459,6 +505,7 @@ function resolve(
 export function validateWorkspace(workspace: AuthoringWorkspace): Diagnostic[] {
   const diagnostics = [
     validatePackage(workspace.package),
+    ...workspace.characters.map(validateCharacter),
     ...workspace.npcs.map(validateNpc),
     ...workspace.sprites.map(validateSprite),
     ...workspace.maps.map(validateMap),
@@ -480,6 +527,40 @@ export function validateWorkspace(workspace: AuthoringWorkspace): Diagnostic[] {
             : "Reference targets the wrong entry kind.",
       });
   };
+  workspace.characters.forEach((character) => {
+    if (!character.visual) return;
+    addReference(
+      character.character_record_id,
+      "/visual/sprite_manifest",
+      resolve(
+        character.visual.sprite_manifest,
+        workspace.package.package_id,
+        workspace.package.entries,
+        "sprite-animation",
+      ),
+    );
+    const sprite = workspace.sprites.find(
+      (item) =>
+        item.sprite_manifest_id === character.visual?.sprite_manifest.record_id,
+    );
+    if (sprite)
+      sprite.options.forEach((option) => {
+        const selected =
+          character.visual?.options[option.option_id] ??
+          option.default_choice_id;
+        if (
+          !selected ||
+          !option.choices.some((choice) => choice.choice_id === selected)
+        )
+          diagnostics.push({
+            code: "character.invalid-visual-option",
+            severity: "error",
+            document_id: character.character_record_id,
+            path: `/visual/options/${option.option_id}`,
+            message: "Select a declared visual option choice.",
+          });
+      });
+  });
   workspace.npcs.forEach((npc) => {
     addReference(
       npc.npc_record_id,

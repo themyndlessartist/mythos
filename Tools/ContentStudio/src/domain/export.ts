@@ -53,6 +53,12 @@ const recordFiles = (
   path: string;
   bytes: Uint8Array;
 }> => [
+  ...workspace.characters.map((value) => ({
+    kind: "character" as const,
+    id: value.character_record_id,
+    path: `records/characters/${value.character_record_id}.json`,
+    bytes: utf8(canonicalJson(value)),
+  })),
   ...workspace.npcs.map((value) => ({
     kind: "npc" as const,
     id: value.npc_record_id,
@@ -77,6 +83,14 @@ export function exportReadinessDiagnostics(
   workspace: AuthoringWorkspace,
 ): Diagnostic[] {
   const entries: PackageEntry[] = [
+    ...workspace.characters.map((value) => ({
+      kind: "character" as const,
+      id: value.character_record_id,
+      path: `records/characters/${value.character_record_id}.json`,
+      media_type: "application/json",
+      size: 0,
+      integrity: { algorithm: "sha256", digest: "pending" },
+    })),
     ...workspace.npcs.map((value) => ({
       kind: "npc" as const,
       id: value.npc_record_id,

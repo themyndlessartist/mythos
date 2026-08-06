@@ -6,12 +6,22 @@
     {
       "path": "package.json",
       "media_type": "application/json",
-      "size": 469,
+      "size": 815,
       "integrity": {
         "algorithm": "sha256",
-        "digest": "40fcb08b51e3c533693cd83699a8ae4e753007c54941d1d1c63f5169c492d5ab"
+        "digest": "401e75fc77a52d91faa81588f2451f9a7176581f16c40f053dc579ede95c8325"
       },
-      "content_base64": "ewogICJkZXBlbmRlbmNpZXMiOiBbXSwKICAiZGlzcGxheV9uYW1lIjogIk15dGhvczogR2VuZXNpcyAtIExha2V3b29kIFZlcnRpY2FsIFNsaWNlIiwKICAiZG9jdW1lbnRfa2luZCI6ICJteXRob3MuY29udGVudC1wYWNrYWdlIiwKICAiZW50cmllcyI6IFtdLAogICJleHRlbnNpb25zIjogewogICAgIm15dGhvcy5nZW5lc2lzIjogewogICAgICAicGxheWFibGVfdGVzdF9jaGFyYWN0ZXIiOiAia2hhaWdlIiwKICAgICAgInN0YXJ0aW5nX2FyZWEiOiAibGFrZXdvb2QiLAogICAgICAic3RhdHVzIjogInZlcnRpY2FsLXNsaWNlLWJvb3RzdHJhcCIsCiAgICAgICJ2ZXJ0aWNhbF9zbGljZSI6ICJzZXR0bGVtZW50LWdyb3d0aCIKICAgIH0KICB9LAogICJwYWNrYWdlX2lkIjogIm15dGhvcy1nZW5lc2lzLmxha2V3b29kIiwKICAicGFja2FnZV92ZXJzaW9uIjogIjAuMS4wIiwKICAic2NoZW1hX3ZlcnNpb24iOiAiMS4wIgp9Cg=="
+      "content_base64": "ewogICJkZXBlbmRlbmNpZXMiOiBbXSwKICAiZGlzcGxheV9uYW1lIjogIk15dGhvczogR2VuZXNpcyAtIExha2V3b29kIFZlcnRpY2FsIFNsaWNlIiwKICAiZG9jdW1lbnRfa2luZCI6ICJteXRob3MuY29udGVudC1wYWNrYWdlIiwKICAiZW50cmllcyI6IFsKICAgIHsKICAgICAgImlkIjogIm15dGhvcy1nZW5lc2lzLmtoYWlnZSIsCiAgICAgICJpbnRlZ3JpdHkiOiB7CiAgICAgICAgImFsZ29yaXRobSI6ICJzaGEyNTYiLAogICAgICAgICJkaWdlc3QiOiAiNGY5ODhhNDg5YjRhY2ViMzAzM2NlZDUzNWFjMmM3MDhjNjgxNjM5NjY0ZWJiNGQ0ZmY5MDE0ZWYzZmUxZDkwOCIKICAgICAgfSwKICAgICAgImtpbmQiOiAiY2hhcmFjdGVyIiwKICAgICAgIm1lZGlhX3R5cGUiOiAiYXBwbGljYXRpb24vanNvbiIsCiAgICAgICJwYXRoIjogInJlY29yZHMvY2hhcmFjdGVycy9teXRob3MtZ2VuZXNpcy5raGFpZ2UuanNvbiIsCiAgICAgICJzaXplIjogNDk0CiAgICB9CiAgXSwKICAiZXh0ZW5zaW9ucyI6IHsKICAgICJteXRob3MuZ2VuZXNpcyI6IHsKICAgICAgInBsYXlhYmxlX3Rlc3RfY2hhcmFjdGVyIjogImtoYWlnZSIsCiAgICAgICJzdGFydGluZ19hcmVhIjogImxha2V3b29kIiwKICAgICAgInN0YXR1cyI6ICJ2ZXJ0aWNhbC1zbGljZS1ib290c3RyYXAiLAogICAgICAidmVydGljYWxfc2xpY2UiOiAic2V0dGxlbWVudC1ncm93dGgiCiAgICB9CiAgfSwKICAicGFja2FnZV9pZCI6ICJteXRob3MtZ2VuZXNpcy5sYWtld29vZCIsCiAgInBhY2thZ2VfdmVyc2lvbiI6ICIwLjEuMCIsCiAgInNjaGVtYV92ZXJzaW9uIjogIjEuMSIKfQo="
+    },
+    {
+      "path": "records/characters/mythos-genesis.khaige.json",
+      "media_type": "application/json",
+      "size": 494,
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "4f988a489b4aceb3033ced535ac2c708c681639664ebb4d4ff9014ef3fe1d908"
+      },
+      "content_base64": "ewogICJjaGFyYWN0ZXJfcmVjb3JkX2lkIjogIm15dGhvcy1nZW5lc2lzLmtoYWlnZSIsCiAgImRpc3BsYXlfbmFtZSI6ICJLaGFpZ2UiLAogICJkb2N1bWVudF9raW5kIjogIm15dGhvcy5jaGFyYWN0ZXItYXV0aG9yaW5nIiwKICAiZXh0ZW5zaW9ucyI6IHsKICAgICJteXRob3MuZ2VuZXNpcyI6IHsKICAgICAgImludGVuZGVkX3JvbGUiOiAicGxheWFibGUtdGVzdC1jaGFyYWN0ZXIiLAogICAgICAic3RhcnRpbmdfYXJlYSI6ICJsYWtld29vZCIKICAgIH0KICB9LAogICJub3RlcyI6ICJQbGF5YWJsZSB0ZXN0IGNoYXJhY3RlciBmb3IgdGhlIExha2V3b29kIHZlcnRpY2FsIHNsaWNlLiBBcHBlYXJhbmNlLCBiYWNrZ3JvdW5kLCBza2lsbHMsIGFuZCBwcm9mZXNzaW9uIHJlbWFpbiB1bmFzc2lnbmVkLiIsCiAgInNjaGVtYV92ZXJzaW9uIjogIjEuMCIsCiAgInRhZ3MiOiBbCiAgICAibXl0aG9zLWdlbmVzaXMucGxheWFibGUtdGVzdC1jaGFyYWN0ZXIiCiAgXQp9Cgo="
     }
   ]
 }

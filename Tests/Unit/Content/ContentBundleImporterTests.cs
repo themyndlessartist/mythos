@@ -74,6 +74,35 @@ public sealed class ContentBundleImporterTests
     }
 
     [Fact]
+    public void EnforcesEntryKindsByPackageSchemaVersion()
+    {
+        var content = Encoding.UTF8.GetBytes("{}");
+        var character = new Entry(
+            "character",
+            "mythos-genesis.khaige",
+            "records/characters/mythos-genesis.khaige.json",
+            "application/json",
+            content.Length,
+            Digest(content));
+
+        var schema10 = Package("genesis.lakewood", [character]);
+        var rejected = Bundle("genesis.lakewood",
+        [
+            ("package.json", "application/json", schema10),
+            (character.path, character.media_type, content),
+        ]);
+        Assert.Equal(ContentImportErrorCodes.InventoryMismatch, new ContentBundleImporter().Import(rejected).Error!.Code);
+
+        var schema11 = Package("genesis.lakewood", [character], "1.1");
+        var accepted = Bundle("genesis.lakewood",
+        [
+            ("package.json", "application/json", schema11),
+            (character.path, character.media_type, content),
+        ]);
+        Assert.True(new ContentBundleImporter().Import(accepted).IsSuccess);
+    }
+
+    [Fact]
     public void EnforcesConfiguredFileAndBundleLimits()
     {
         var package = Package("genesis.lakewood", []);
@@ -84,10 +113,10 @@ public sealed class ContentBundleImporterTests
         Assert.Equal(ContentImportErrorCodes.LimitExceeded, result.Error!.Code);
     }
 
-    private static byte[] Package(string packageId, IReadOnlyList<Entry> entries) => JsonSerializer.SerializeToUtf8Bytes(new
+    private static byte[] Package(string packageId, IReadOnlyList<Entry> entries, string schemaVersion = "1.0") => JsonSerializer.SerializeToUtf8Bytes(new
     {
         document_kind = "mythos.content-package",
-        schema_version = "1.0",
+        schema_version = schemaVersion,
         package_id = packageId,
         package_version = "0.1.0",
         display_name = "Test",
@@ -117,9 +146,13 @@ public sealed class ContentBundleImporterTests
 
     private static string Digest(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
 
-    private sealed record Entry(string id, string path, string media_type, int size, string digest)
+    private sealed record Entry(string kind, string id, string path, string media_type, int size, string digest)
     {
-        public string kind => "asset";
+        public Entry(string id, string path, string mediaType, int size, string digest)
+            : this("asset", id, path, mediaType, size, digest)
+        {
+        }
+
         public object integrity => new { algorithm = "sha256", digest };
     }
 }

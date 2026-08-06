@@ -1,0 +1,17 @@
+{
+  "character_record_id": "mythos-genesis.khaige",
+  "display_name": "Khaige",
+  "document_kind": "mythos.character-authoring",
+  "extensions": {
+    "mythos.genesis": {
+      "intended_role": "playable-test-character",
+      "starting_area": "lakewood"
+    }
+  },
+  "notes": "Playable test character for the Lakewood vertical slice. Appearance, background, skills, and profession remain unassigned.",
+  "schema_version": "1.0",
+  "tags": [
+    "mythos-genesis.playable-test-character"
+  ]
+}
+

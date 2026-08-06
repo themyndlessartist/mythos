@@ -13,7 +13,7 @@ export interface Integrity {
 }
 
 export type PackageEntryKind =
-  "npc" | "sprite-animation" | "layered-map" | "asset";
+  "character" | "npc" | "sprite-animation" | "layered-map" | "asset";
 
 export interface PackageEntry {
   kind: PackageEntryKind;
@@ -31,7 +31,7 @@ export interface PackageDependency {
 
 export interface ContentPackageManifest {
   document_kind: "mythos.content-package";
-  schema_version: "1.0";
+  schema_version: "1.0" | "1.1";
   package_id: NamespacedId;
   package_version: string;
   display_name: string;
@@ -46,6 +46,20 @@ export interface NpcAuthoringRecord {
   npc_record_id: NamespacedId;
   display_name: string;
   visual: {
+    sprite_manifest: RecordReference;
+    options: Record<string, NamespacedId>;
+  };
+  tags?: NamespacedId[];
+  notes?: string;
+  extensions?: PassiveExtensions;
+}
+
+export interface CharacterAuthoringRecord {
+  document_kind: "mythos.character-authoring";
+  schema_version: "1.0";
+  character_record_id: NamespacedId;
+  display_name: string;
+  visual?: {
     sprite_manifest: RecordReference;
     options: Record<string, NamespacedId>;
   };
@@ -143,6 +157,7 @@ export interface AssetMetadata {
 
 export interface AuthoringWorkspace {
   package: ContentPackageManifest;
+  characters: CharacterAuthoringRecord[];
   npcs: NpcAuthoringRecord[];
   sprites: SpriteAnimationManifest[];
   maps: LayeredMapManifest[];
@@ -151,6 +166,7 @@ export interface AuthoringWorkspace {
 
 export type AuthoringDocument =
   | ContentPackageManifest
+  | CharacterAuthoringRecord
   | NpcAuthoringRecord
   | SpriteAnimationManifest
   | LayeredMapManifest;

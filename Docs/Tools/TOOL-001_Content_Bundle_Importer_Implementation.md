@@ -33,7 +33,7 @@ The source manifest at `Data/TitlePackages/Genesis/Lakewood/package.json` carrie
 - Khaige as the playable test character; and
 - settlement growth as the vertical-slice focus.
 
-It intentionally declares no content records or assets yet. `Scripts/build_content_bundle.mjs` wraps validated source-package bytes into the deterministic bundle consumed from the Godot project. Both macOS and Windows build scripts regenerate the bundle before compilation and verification.
+It now includes Khaige's control-neutral DATA-005 Character authoring record. The record preserves only approved facts and intentionally leaves visual identity, background, profession, and skills unassigned. `Scripts/build_content_bundle.mjs` wraps validated source-package bytes into the deterministic bundle consumed from the Godot project. Both macOS and Windows build scripts regenerate the bundle before compilation and verification.
 
 ## Godot Boundary
 
@@ -41,15 +41,14 @@ It intentionally declares no content records or assets yet. `Scripts/build_conte
 
 ## Verification
 
-- Four importer tests cover valid import, path traversal, case collisions, tampering, inventory mismatch, and configured limits.
-- The complete C# suite passes with 227 tests.
+- Importer tests cover valid schema 1.0 and 1.1 packages, versioned entry kinds, path traversal, case collisions, tampering, inventory mismatch, and configured limits.
+- The complete C# suite passes with 228 tests.
 - Framework smoke verification passes.
 - Godot headless editor import and runtime startup pass with `mythos-genesis.lakewood`.
-- Content Studio passes 27 tests, TypeScript checking, and lint.
+- Content Studio passes 29 tests, TypeScript checking, lint, and formatting verification.
 
 ## Remaining M-003 Work
 
-- Approve a shared Character authoring contract for Khaige rather than misuse DATA-002.
 - Add Lakewood map, resources, construction sites, and provisional NPC records.
 - Add approved raster assets and sprite/map manifests.
 - Translate accepted authoring records into runtime Entity, Region, Character, and NPC state.

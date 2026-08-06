@@ -11,6 +11,12 @@ public sealed record ContentImportLimits(
 
 public sealed class ContentBundleImporter
 {
+    private static readonly HashSet<string> Schema10EntryKinds =
+        ["npc", "sprite-animation", "layered-map", "asset"];
+
+    private static readonly HashSet<string> Schema11EntryKinds =
+        [.. Schema10EntryKinds, "character"];
+
     private static readonly Regex PackageIdPattern = new(
         "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$",
         RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
@@ -161,7 +167,8 @@ public sealed class ContentBundleImporter
         {
             var root = manifestDocument.RootElement;
             if (!HasExactString(root, "document_kind", "mythos.content-package") ||
-                !HasExactString(root, "schema_version", "1.0") ||
+                !TryRequiredString(root, "schema_version", out var schemaVersion) ||
+                (schemaVersion != "1.0" && schemaVersion != "1.1") ||
                 !TryRequiredString(root, "package_id", out var manifestPackageId) ||
                 !string.Equals(packageId, manifestPackageId, StringComparison.Ordinal) ||
                 !root.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array)
@@ -170,9 +177,17 @@ public sealed class ContentBundleImporter
             }
 
             var declaredPaths = new HashSet<string>(StringComparer.Ordinal);
+            var declaredIds = new HashSet<string>(StringComparer.Ordinal);
+            var supportedEntryKinds = schemaVersion == "1.1" ? Schema11EntryKinds : Schema10EntryKinds;
             foreach (var entry in entries.EnumerateArray())
             {
-                if (!TryRequiredString(entry, "path", out var path) ||
+                if (!TryRequiredString(entry, "kind", out var kind) ||
+                    !supportedEntryKinds.Contains(kind) ||
+                    !TryRequiredString(entry, "id", out var id) ||
+                    !PackageIdPattern.IsMatch(id) ||
+                    !declaredIds.Add(id) ||
+                    !TryRequiredString(entry, "path", out var path) ||
+                    !IsSafePath(path) ||
                     !TryRequiredString(entry, "media_type", out var mediaType) ||
                     !entry.TryGetProperty("size", out var sizeElement) || !sizeElement.TryGetInt32(out var size) ||
                     !entry.TryGetProperty("integrity", out var integrity) || integrity.ValueKind != JsonValueKind.Object ||

@@ -2,7 +2,19 @@
   "dependencies": [],
   "display_name": "Mythos: Genesis - Lakewood Vertical Slice",
   "document_kind": "mythos.content-package",
-  "entries": [],
+  "entries": [
+    {
+      "id": "mythos-genesis.khaige",
+      "integrity": {
+        "algorithm": "sha256",
+        "digest": "4f988a489b4aceb3033ced535ac2c708c681639664ebb4d4ff9014ef3fe1d908"
+      },
+      "kind": "character",
+      "media_type": "application/json",
+      "path": "records/characters/mythos-genesis.khaige.json",
+      "size": 494
+    }
+  ],
   "extensions": {
     "mythos.genesis": {
       "playable_test_character": "khaige",
@@ -13,5 +25,5 @@
   },
   "package_id": "mythos-genesis.lakewood",
   "package_version": "0.1.0",
-  "schema_version": "1.0"
+  "schema_version": "1.1"
 }

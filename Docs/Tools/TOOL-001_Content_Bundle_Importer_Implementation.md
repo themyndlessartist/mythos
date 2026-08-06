@@ -41,6 +41,8 @@ It now includes Khaige's control-neutral DATA-005 Character authoring record. Th
 
 `PrototypeRoot` loads the bundled artifact through `Mythos.Content`, then locates and validates Khaige's Character record. Import failure stops the headless run with a structured diagnostic. Success reports the accepted package and character names. No title rules or content parsing were added to `Mythos.Framework`.
 
+The Genesis Godot adapter creates a runtime Character Entity from the accepted record. Required status and life-stage references that have not yet been approved use `mythos-test.*` identifiers local to the adapter; these are explicit prototype placeholders, not exported content or canon.
+
 ## Verification
 
 - Importer tests cover valid schema 1.0 and 1.1 packages, versioned entry kinds, path traversal, case collisions, tampering, inventory mismatch, and configured limits.

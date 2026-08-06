@@ -8,6 +8,7 @@ All notable changes to Mythos will be documented in this file.
 
 - Added DATA-005 shared Character authoring records, Content Studio validation/export support, and the first control-neutral Khaige record for the Genesis/Lakewood slice.
 - Added independent DATA-005 Character record validation and Godot startup verification for Khaige without prematurely creating runtime state.
+- Added a Genesis title adapter that creates Khaige as a shared-framework Character Entity using explicit non-canon test references for deferred status and life-stage data.
 - Started M-003 Lakewood Vertical Slice for **Mythos: Genesis**, recording Lakewood, Khaige, settlement growth, scope boundaries, and acceptance criteria.
 - Added the engine-neutral `Mythos.Content` bundle importer with path safety, limits, SHA-256 integrity, package identity, and exact inventory validation.
 - Added a deterministic Genesis/Lakewood bootstrap package, cross-platform bundle generation, Godot startup validation, and importer tests.

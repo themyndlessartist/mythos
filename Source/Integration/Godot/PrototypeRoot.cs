@@ -1,5 +1,6 @@
 using Godot;
 using Mythos.Content;
+using Mythos.Framework.Entities;
 
 namespace Mythos.GodotIntegration;
 
@@ -29,6 +30,15 @@ public partial class PrototypeRoot : Node
             return;
         }
 
-        GD.Print($"{Framework.FrameworkAssembly.Name} ready with content package '{bundle.PackageId}' and character '{khaige.Value!.DisplayName}'.");
+        var entities = new EntityRegistry();
+        var runtimeCharacter = GenesisCharacterBootstrap.Create(khaige.Value!, entities, 0);
+        if (!runtimeCharacter.IsSuccess)
+        {
+            GD.PushError($"Genesis character bootstrap failed: {runtimeCharacter.ErrorCode} - {runtimeCharacter.ErrorMessage}");
+            GetTree().Quit(1);
+            return;
+        }
+
+        GD.Print($"{Framework.FrameworkAssembly.Name} ready with content package '{bundle.PackageId}' and runtime character '{runtimeCharacter.Character!.Identity}'.");
     }
 }
